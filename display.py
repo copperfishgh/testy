@@ -46,27 +46,49 @@ class ChessDisplay:
         self.piece_images = self._load_piece_images()
     
     def _load_piece_images(self) -> dict:
-        """Load piece images - placeholder implementation"""
-        # In a real implementation, you'd load actual piece images
-        # For now, we'll create simple colored rectangles as placeholders
+        """Load and scale piece images from PNG files"""
         images = {}
-        
+
         for color in [Color.WHITE, Color.BLACK]:
             for piece_type in PieceType:
-                key = f"{color.value}{piece_type.value}"
-                # Create a simple colored square as placeholder
-                surface = pygame.Surface((self.square_size - 10, self.square_size - 10))
-                if color == Color.WHITE:
-                    surface.fill(self.WHITE)
+                # Calculate piece size based on type (pawns smaller than other pieces)
+                if piece_type == PieceType.PAWN:
+                    piece_size = int(self.square_size * 0.65)
                 else:
-                    surface.fill(self.BLACK)
-                pygame.draw.rect(surface, (100, 100, 100), surface.get_rect(), 2)
-                images[key] = surface
-        
+                    piece_size = int(self.square_size * 0.75)
+
+                # Create filename based on naming convention: {color}{piece}.png
+                color_prefix = "w" if color == Color.WHITE else "b"
+                filename = f"pngs/2x/{color_prefix}{piece_type.value}.png"
+
+                try:
+                    # Load the original image
+                    original_image = pygame.image.load(filename)
+
+                    # Scale once using smooth scaling and cache it
+                    scaled_image = pygame.transform.smoothscale(original_image, (piece_size, piece_size))
+
+                    # Store with the key format used elsewhere in the code
+                    key = f"{color.value}{piece_type.value}"
+                    images[key] = scaled_image
+
+                except pygame.error as e:
+                    print(f"Warning: Could not load {filename}: {e}")
+                    # Create a fallback colored rectangle if image loading fails
+                    surface = pygame.Surface((piece_size, piece_size))
+                    if color == Color.WHITE:
+                        surface.fill(self.WHITE)
+                    else:
+                        surface.fill(self.BLACK)
+                    pygame.draw.rect(surface, (100, 100, 100), surface.get_rect(), 2)
+
+                    key = f"{color.value}{piece_type.value}"
+                    images[key] = surface
+
         return images
     
-    def draw_board(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None, 
-                   possible_moves: List[Tuple[int, int]] = None) -> None:
+    def draw_board(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
+                   possible_moves: List[Tuple[int, int]] = None, flipped: bool = False) -> None:
         """Draw the chess board with pieces"""
         if possible_moves is None:
             possible_moves = []
@@ -74,13 +96,16 @@ class ChessDisplay:
         # Draw the board squares
         for row in range(8):
             for col in range(8):
-                x = self.board_offset_x + col * self.square_size
-                y = self.board_offset_y + row * self.square_size
+                # Apply flipping transformation
+                display_row = (7 - row) if flipped else row
+                display_col = (7 - col) if flipped else col
+                x = self.board_offset_x + display_col * self.square_size
+                y = self.board_offset_y + display_row * self.square_size
                 
-                # Determine square color
+                # Determine square color (use original coordinates for coloring)
                 is_light = (row + col) % 2 == 0
                 color = self.LIGHT_SQUARE if is_light else self.DARK_SQUARE
-                
+
                 # Highlight selected square
                 if selected_square and selected_square == (row, col):
                     color = self.SELECTED
@@ -103,7 +128,7 @@ class ChessDisplay:
         pygame.draw.rect(screen, self.BLACK, border_rect, 2)
         
         # Draw coordinates
-        self.draw_coordinates(screen)
+        self.draw_coordinates(screen, flipped)
     
     def draw_piece(self, screen, piece: Piece, x: int, y: int) -> None:
         """Draw a piece at the specified screen coordinates"""
@@ -122,11 +147,11 @@ class ChessDisplay:
             text_rect = text_surface.get_rect(center=(x + self.square_size//2, y + self.square_size//2))
             screen.blit(text_surface, text_rect)
     
-    def draw_coordinates(self, screen) -> None:
+    def draw_coordinates(self, screen, flipped: bool = False) -> None:
         """Draw board coordinates (a-h, 1-8)"""
         # Draw file letters (a-h)
         for col in range(8):
-            letter = chr(ord('a') + col)
+            letter = chr(ord('a') + (7 - col if flipped else col))
             x = self.board_offset_x + col * self.square_size + self.square_size // 2
             y = self.board_offset_y + self.board_size + 10
             
@@ -136,7 +161,7 @@ class ChessDisplay:
         
         # Draw rank numbers (1-8)
         for row in range(8):
-            number = str(8 - row)
+            number = str((row + 1) if flipped else (8 - row))
             x = self.board_offset_x - 20
             y = self.board_offset_y + row * self.square_size + self.square_size // 2
             
@@ -251,13 +276,13 @@ class ChessDisplay:
             self.draw_text(screen, move_text, history_x, history_y + 30 + i * line_height, self.font_small)
     
     def update_display(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
-                      possible_moves: List[Tuple[int, int]] = None) -> None:
+                      possible_moves: List[Tuple[int, int]] = None, flipped: bool = False) -> None:
         """Update the entire display"""
         # Clear screen
         screen.fill(self.WHITE)
-        
+
         # Draw all components
-        self.draw_board(screen, board_state, selected_square, possible_moves)
+        self.draw_board(screen, board_state, selected_square, possible_moves, flipped)
         
         # Note: pygame.display.flip() is called in the main loop, not here
     

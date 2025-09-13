@@ -102,14 +102,7 @@ while running:
                                 possible_moves = []
     
     # Draw the chess board (with flip consideration)
-    # Note: display.update_display() handles screen clearing
-    if board_flipped:
-        # Create a flipped version of the board for display
-        # This is a simplified approach - in a full implementation,
-        # you'd want to modify the display logic to handle flipping
-        display.update_display(screen, chess_board, selected_square, possible_moves)
-    else:
-        display.update_display(screen, chess_board, selected_square, possible_moves)
+    display.update_display(screen, chess_board, selected_square, possible_moves, board_flipped)
     
     # Draw flip button
     button_color = BUTTON_HOVER if flip_button_rect.collidepoint(pygame.mouse.get_pos()) else BUTTON_COLOR
