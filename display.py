@@ -25,16 +25,17 @@ class ChessDisplay:
         self.HIGHLIGHT = (255, 255, 0)       # Yellow for highlights
         self.SELECTED = (255, 0, 0)          # Red for selected square
         
-        # Board dimensions (75% of original size)
-        self.board_size = int(min(window_width - 200, window_height - 100) * 0.75)  # Leave space for info panel
+        # Board dimensions - use a fixed size for now to debug
+        self.board_size = 400  # Fixed size for debugging
         self.square_size = self.board_size // 8
-        self.board_offset_x = 50
-        self.board_offset_y = 50
         
-        # Initialize Pygame
-        pygame.init()
-        self.screen = pygame.display.set_mode((window_width, window_height))
-        pygame.display.set_caption("Chess Game")
+        # Center the board in the window
+        self.board_offset_x = (window_width - self.board_size) // 2
+        self.board_offset_y = (window_height - self.board_size) // 2
+        
+        # Ensure pygame is initialized before creating fonts
+        if not pygame.get_init():
+            pygame.init()
         
         # Font setup
         self.font_large = pygame.font.Font(None, 36)
@@ -64,7 +65,7 @@ class ChessDisplay:
         
         return images
     
-    def draw_board(self, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None, 
+    def draw_board(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None, 
                    possible_moves: List[Tuple[int, int]] = None) -> None:
         """Draw the chess board with pieces"""
         if possible_moves is None:
@@ -88,23 +89,23 @@ class ChessDisplay:
                     color = self.HIGHLIGHT
                 
                 # Draw the square
-                pygame.draw.rect(self.screen, color, 
+                pygame.draw.rect(screen, color, 
                                (x, y, self.square_size, self.square_size))
                 
                 # Draw piece if present
                 piece = board_state.get_piece(row, col)
                 if piece:
-                    self.draw_piece(piece, x, y)
+                    self.draw_piece(screen, piece, x, y)
         
         # Draw board border
         border_rect = pygame.Rect(self.board_offset_x - 2, self.board_offset_y - 2,
                                 self.board_size + 4, self.board_size + 4)
-        pygame.draw.rect(self.screen, self.BLACK, border_rect, 2)
+        pygame.draw.rect(screen, self.BLACK, border_rect, 2)
         
         # Draw coordinates
-        self.draw_coordinates()
+        self.draw_coordinates(screen)
     
-    def draw_piece(self, piece: Piece, x: int, y: int) -> None:
+    def draw_piece(self, screen, piece: Piece, x: int, y: int) -> None:
         """Draw a piece at the specified screen coordinates"""
         # Get piece image
         key = f"{piece.color.value}{piece.type.value}"
@@ -113,15 +114,15 @@ class ChessDisplay:
             # Center the piece in the square
             piece_x = x + (self.square_size - piece_surface.get_width()) // 2
             piece_y = y + (self.square_size - piece_surface.get_height()) // 2
-            self.screen.blit(piece_surface, (piece_x, piece_y))
+            screen.blit(piece_surface, (piece_x, piece_y))
         else:
             # Fallback: draw piece as text
             piece_text = str(piece)
             text_surface = self.font_large.render(piece_text, True, self.BLACK)
             text_rect = text_surface.get_rect(center=(x + self.square_size//2, y + self.square_size//2))
-            self.screen.blit(text_surface, text_rect)
+            screen.blit(text_surface, text_rect)
     
-    def draw_coordinates(self) -> None:
+    def draw_coordinates(self, screen) -> None:
         """Draw board coordinates (a-h, 1-8)"""
         # Draw file letters (a-h)
         for col in range(8):
@@ -131,7 +132,7 @@ class ChessDisplay:
             
             text_surface = self.font_small.render(letter, True, self.BLACK)
             text_rect = text_surface.get_rect(center=(x, y))
-            self.screen.blit(text_surface, text_rect)
+            screen.blit(text_surface, text_rect)
         
         # Draw rank numbers (1-8)
         for row in range(8):
@@ -141,29 +142,30 @@ class ChessDisplay:
             
             text_surface = self.font_small.render(number, True, self.BLACK)
             text_rect = text_surface.get_rect(center=(x, y))
-            self.screen.blit(text_surface, text_rect)
+            screen.blit(text_surface, text_rect)
     
-    def draw_game_info(self, board_state: BoardState) -> None:
+    def draw_game_info(self, screen, board_state: BoardState) -> None:
         """Draw game information panel"""
-        info_x = self.board_offset_x + self.board_size + 20
+        # Position info panel to the right of the board, but ensure it fits in window
+        info_x = min(self.board_offset_x + self.board_size + 20, self.window_width - 180)
         info_y = self.board_offset_y
         line_height = 30
         
         # Current turn
         turn_text = f"Turn: {'White' if board_state.current_turn == Color.WHITE else 'Black'}"
-        self.draw_text(turn_text, info_x, info_y, self.font_medium)
+        self.draw_text(screen, turn_text, info_x, info_y, self.font_medium)
         
         # Move number
         move_text = f"Move: {board_state.fullmove_number}"
-        self.draw_text(move_text, info_x, info_y + line_height, self.font_medium)
+        self.draw_text(screen, move_text, info_x, info_y + line_height, self.font_medium)
         
         # Halfmove clock (for 50-move rule)
         halfmove_text = f"Halfmove Clock: {board_state.halfmove_clock}"
-        self.draw_text(halfmove_text, info_x, info_y + line_height * 2, self.font_small)
+        self.draw_text(screen, halfmove_text, info_x, info_y + line_height * 2, self.font_small)
         
         # Castling rights
         castling_y = info_y + line_height * 4
-        self.draw_text("Castling Rights:", info_x, castling_y, self.font_medium)
+        self.draw_text(screen, "Castling Rights:", info_x, castling_y, self.font_medium)
         
         white_castling = []
         if board_state.castling_rights.white_kingside:
@@ -178,10 +180,10 @@ class ChessDisplay:
             black_castling.append("q")
         
         castling_text = f"White: {''.join(white_castling) if white_castling else '-'}"
-        self.draw_text(castling_text, info_x, castling_y + 25, self.font_small)
+        self.draw_text(screen, castling_text, info_x, castling_y + 25, self.font_small)
         
         castling_text = f"Black: {''.join(black_castling) if black_castling else '-'}"
-        self.draw_text(castling_text, info_x, castling_y + 45, self.font_small)
+        self.draw_text(screen, castling_text, info_x, castling_y + 45, self.font_small)
         
         # En passant target
         if board_state.en_passant_target:
@@ -190,7 +192,7 @@ class ChessDisplay:
             ep_text = f"En Passant: {ep_square}"
         else:
             ep_text = "En Passant: -"
-        self.draw_text(ep_text, info_x, castling_y + 80, self.font_small)
+        self.draw_text(screen, ep_text, info_x, castling_y + 80, self.font_small)
         
         # Game status
         status_y = castling_y + 120
@@ -207,23 +209,23 @@ class ChessDisplay:
             status_text = "Game in Progress"
             status_color = (0, 128, 0)  # Green
         
-        self.draw_text(status_text, info_x, status_y, self.font_medium, status_color)
+        self.draw_text(screen, status_text, info_x, status_y, self.font_medium, status_color)
         
         # FEN position (abbreviated)
         fen_text = board_state.get_fen_position()
         if len(fen_text) > 40:
             fen_text = fen_text[:40] + "..."
-        self.draw_text("FEN:", info_x, status_y + 40, self.font_small)
-        self.draw_text(fen_text, info_x, status_y + 60, self.font_small)
+        self.draw_text(screen, "FEN:", info_x, status_y + 40, self.font_small)
+        self.draw_text(screen, fen_text, info_x, status_y + 60, self.font_small)
     
-    def draw_text(self, text: str, x: int, y: int, font: pygame.font.Font, 
+    def draw_text(self, screen, text: str, x: int, y: int, font: pygame.font.Font, 
                   color: Tuple[int, int, int] = None) -> None:
         """Draw text at the specified position"""
         if color is None:
             color = self.BLACK
         
         text_surface = font.render(text, True, color)
-        self.screen.blit(text_surface, (x, y))
+        screen.blit(text_surface, (x, y))
     
     def get_square_from_mouse(self, mouse_pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """Convert mouse position to board square coordinates"""
@@ -241,30 +243,30 @@ class ChessDisplay:
         
         return None
     
-    def draw_move_history(self, board_state: BoardState, max_moves: int = 10) -> None:
+    def draw_move_history(self, screen, board_state: BoardState, max_moves: int = 10) -> None:
         """Draw recent move history"""
         history_x = self.board_offset_x
-        history_y = self.board_offset_y + self.board_size + 50
+        history_y = min(self.board_offset_y + self.board_size + 50, self.window_height - 100)
         line_height = 20
         
-        self.draw_text("Recent Moves:", history_x, history_y, self.font_medium)
+        self.draw_text(screen, "Recent Moves:", history_x, history_y, self.font_medium)
         
         # Show last few moves
         recent_moves = board_state.move_history[-max_moves:]
         for i, move in enumerate(recent_moves):
             move_text = f"{i+1}. {move.notation}"
-            self.draw_text(move_text, history_x, history_y + 30 + i * line_height, self.font_small)
+            self.draw_text(screen, move_text, history_x, history_y + 30 + i * line_height, self.font_small)
     
-    def update_display(self, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
+    def update_display(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
                       possible_moves: List[Tuple[int, int]] = None) -> None:
         """Update the entire display"""
         # Clear screen
-        self.screen.fill(self.WHITE)
+        screen.fill(self.WHITE)
         
         # Draw all components
-        self.draw_board(board_state, selected_square, possible_moves)
-        self.draw_game_info(board_state)
-        self.draw_move_history(board_state)
+        self.draw_board(screen, board_state, selected_square, possible_moves)
+        self.draw_game_info(screen, board_state)
+        self.draw_move_history(screen, board_state)
         
         # Note: pygame.display.flip() is called in the main loop, not here
     
@@ -275,6 +277,11 @@ class ChessDisplay:
 # Example usage
 if __name__ == "__main__":
     from chess_board import BoardState
+    
+    # Initialize pygame and create screen
+    pygame.init()
+    screen = pygame.display.set_mode((1000, 700))
+    pygame.display.set_caption("Chess Game - Example")
     
     # Create display and board
     display = ChessDisplay(1000, 700)
@@ -293,7 +300,8 @@ if __name__ == "__main__":
                     running = False
         
         # Update display
-        display.update_display(board)
+        display.update_display(screen, board)
+        pygame.display.flip()
         clock.tick(60)
     
     display.quit()

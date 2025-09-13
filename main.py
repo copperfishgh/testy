@@ -7,7 +7,7 @@ from display import ChessDisplay
 pygame.init()
 
 # Set up the display
-WINDOW_WIDTH = 1000
+WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Chess Game")
@@ -99,9 +99,9 @@ while running:
         # Create a flipped version of the board for display
         # This is a simplified approach - in a full implementation,
         # you'd want to modify the display logic to handle flipping
-        display.update_display(chess_board, selected_square, possible_moves)
+        display.update_display(screen, chess_board, selected_square, possible_moves)
     else:
-        display.update_display(chess_board, selected_square, possible_moves)
+        display.update_display(screen, chess_board, selected_square, possible_moves)
     
     # Draw flip button
     button_color = BUTTON_HOVER if flip_button_rect.collidepoint(pygame.mouse.get_pos()) else BUTTON_COLOR
