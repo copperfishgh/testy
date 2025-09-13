@@ -7,8 +7,8 @@ from display import ChessDisplay
 pygame.init()
 
 # Set up the display
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 450  # Board (400) + coordinate margin (30) + border (20)
+WINDOW_HEIGHT = 490  # Board (400) + coordinates (30) + button area (60)
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Chess Game")
 
@@ -29,7 +29,7 @@ display = ChessDisplay(WINDOW_WIDTH, WINDOW_HEIGHT)
 button_width = 150
 button_height = 40
 button_x = (WINDOW_WIDTH - button_width) // 2
-button_y = WINDOW_HEIGHT - 60
+button_y = WINDOW_HEIGHT - 50  # Positioned closer to bottom
 flip_button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
 
 # Font setup
@@ -114,15 +114,6 @@ while running:
     text_rect = text_surface.get_rect(center=flip_button_rect.center)
     screen.blit(text_surface, text_rect)
     
-    # Draw additional info
-    info_text = f"Board Orientation: {'Flipped' if board_flipped else 'Normal'}"
-    info_surface = font.render(info_text, True, BLACK)
-    screen.blit(info_surface, (10, 10))
-    
-    # Draw instructions
-    instructions = "Click pieces to select, F key or button to flip board"
-    inst_surface = font.render(instructions, True, BLACK)
-    screen.blit(inst_surface, (10, WINDOW_HEIGHT - 30))
     
     # Update the display
     pygame.display.flip()

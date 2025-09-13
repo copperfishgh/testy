@@ -29,9 +29,9 @@ class ChessDisplay:
         self.board_size = 400  # Fixed size for debugging
         self.square_size = self.board_size // 8
         
-        # Center the board in the window
-        self.board_offset_x = (window_width - self.board_size) // 2
-        self.board_offset_y = (window_height - self.board_size) // 2
+        # Position board with minimal margins
+        self.board_offset_x = 30  # Small left margin for coordinates
+        self.board_offset_y = 30  # Small top margin for coordinates
         
         # Ensure pygame is initialized before creating fonts
         if not pygame.get_init():
@@ -146,8 +146,8 @@ class ChessDisplay:
     
     def draw_game_info(self, screen, board_state: BoardState) -> None:
         """Draw game information panel"""
-        # Position info panel to the right of the board, but ensure it fits in window
-        info_x = min(self.board_offset_x + self.board_size + 20, self.window_width - 180)
+        # Position info panel to the right of the board with minimal spacing
+        info_x = self.board_offset_x + self.board_size + 10
         info_y = self.board_offset_y
         line_height = 30
         
@@ -210,13 +210,6 @@ class ChessDisplay:
             status_color = (0, 128, 0)  # Green
         
         self.draw_text(screen, status_text, info_x, status_y, self.font_medium, status_color)
-        
-        # FEN position (abbreviated)
-        fen_text = board_state.get_fen_position()
-        if len(fen_text) > 40:
-            fen_text = fen_text[:40] + "..."
-        self.draw_text(screen, "FEN:", info_x, status_y + 40, self.font_small)
-        self.draw_text(screen, fen_text, info_x, status_y + 60, self.font_small)
     
     def draw_text(self, screen, text: str, x: int, y: int, font: pygame.font.Font, 
                   color: Tuple[int, int, int] = None) -> None:
@@ -246,7 +239,7 @@ class ChessDisplay:
     def draw_move_history(self, screen, board_state: BoardState, max_moves: int = 10) -> None:
         """Draw recent move history"""
         history_x = self.board_offset_x
-        history_y = min(self.board_offset_y + self.board_size + 50, self.window_height - 100)
+        history_y = self.board_offset_y + self.board_size + 10
         line_height = 20
         
         self.draw_text(screen, "Recent Moves:", history_x, history_y, self.font_medium)
@@ -265,8 +258,6 @@ class ChessDisplay:
         
         # Draw all components
         self.draw_board(screen, board_state, selected_square, possible_moves)
-        self.draw_game_info(screen, board_state)
-        self.draw_move_history(screen, board_state)
         
         # Note: pygame.display.flip() is called in the main loop, not here
     
