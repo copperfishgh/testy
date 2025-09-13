@@ -6,9 +6,16 @@ from display import ChessDisplay
 # Initialize Pygame
 pygame.init()
 
-# Set up the display
-WINDOW_WIDTH = 450  # Board (400) + coordinate margin (30) + border (20)
-WINDOW_HEIGHT = 490  # Board (400) + coordinates (30) + button area (60)
+# Get screen dimensions
+screen_info = pygame.display.Info()
+SCREEN_WIDTH = screen_info.current_w
+SCREEN_HEIGHT = screen_info.current_h
+
+# Calculate window size as percentage of screen (75%)
+WINDOW_WIDTH = int(min(SCREEN_WIDTH * 0.75, SCREEN_HEIGHT * 0.75))  # 75% of smaller dimension
+WINDOW_HEIGHT = int(WINDOW_WIDTH * 1.1)  # Slightly taller for button
+
+# Create display
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Chess Game")
 
@@ -25,15 +32,16 @@ chess_board = BoardState()
 # Create display object
 display = ChessDisplay(WINDOW_WIDTH, WINDOW_HEIGHT)
 
-# Button properties
-button_width = 150
-button_height = 40
-button_x = (WINDOW_WIDTH - button_width) // 2
-button_y = WINDOW_HEIGHT - 50  # Positioned closer to bottom
+# Button properties (percentage-based)
+button_width = int(WINDOW_WIDTH * 0.35)  # 35% of window width
+button_height = int(WINDOW_HEIGHT * 0.08)  # 8% of window height
+button_x = (WINDOW_WIDTH - button_width) // 2  # Centered horizontally
+button_y = int(WINDOW_HEIGHT * 0.9)  # 90% down from top
 flip_button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
 
-# Font setup
-font = pygame.font.Font(None, 24)
+# Font setup (percentage-based)
+font_size = int(WINDOW_WIDTH * 0.05)  # 5% of window width
+font = pygame.font.Font(None, font_size)
 
 # Game state
 board_flipped = False

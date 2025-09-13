@@ -25,22 +25,22 @@ class ChessDisplay:
         self.HIGHLIGHT = (255, 255, 0)       # Yellow for highlights
         self.SELECTED = (255, 0, 0)          # Red for selected square
         
-        # Board dimensions - use a fixed size for now to debug
-        self.board_size = 400  # Fixed size for debugging
+        # Board dimensions (percentage-based)
+        self.board_size = int(min(window_width, window_height * 0.9) * 0.85)  # 85% of smaller dimension, with 10% space for button
         self.square_size = self.board_size // 8
         
-        # Position board with minimal margins
-        self.board_offset_x = 30  # Small left margin for coordinates
-        self.board_offset_y = 30  # Small top margin for coordinates
+        # Position board with percentage-based margins
+        self.board_offset_x = int(window_width * 0.07)  # 7% margin from left
+        self.board_offset_y = int(window_height * 0.07)  # 7% margin from top
         
         # Ensure pygame is initialized before creating fonts
         if not pygame.get_init():
             pygame.init()
         
-        # Font setup
-        self.font_large = pygame.font.Font(None, 36)
-        self.font_medium = pygame.font.Font(None, 24)
-        self.font_small = pygame.font.Font(None, 18)
+        # Font setup (percentage-based)
+        self.font_large = pygame.font.Font(None, int(self.board_size * 0.09))   # 9% of board size
+        self.font_medium = pygame.font.Font(None, int(self.board_size * 0.06))  # 6% of board size
+        self.font_small = pygame.font.Font(None, int(self.board_size * 0.045))  # 4.5% of board size
         
         # Load piece images (placeholder - you'd load actual piece images here)
         self.piece_images = self._load_piece_images()
