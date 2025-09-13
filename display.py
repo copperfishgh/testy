@@ -44,6 +44,9 @@ class ChessDisplay:
         
         # Load piece images (placeholder - you'd load actual piece images here)
         self.piece_images = self._load_piece_images()
+
+        # Create move indicator circle surface once
+        self.move_indicator = self._create_move_indicator()
     
     def _load_piece_images(self) -> dict:
         """Load and scale piece images from PNG files"""
@@ -86,7 +89,27 @@ class ChessDisplay:
                     images[key] = surface
 
         return images
-    
+
+    def _create_move_indicator(self) -> pygame.Surface:
+        """Create a translucent circle surface for move indicators"""
+        # Create a surface with per-pixel alpha
+        circle_surface = pygame.Surface((self.square_size, self.square_size), pygame.SRCALPHA)
+
+        # Circle size is 1/4 of the square
+        circle_radius = self.square_size // 4
+        center_x = self.square_size // 2
+        center_y = self.square_size // 2
+
+        # Draw translucent circle (green with 128 alpha for 50% transparency)
+        circle_color = (0, 128, 0, 128)  # Green with 50% transparency
+        pygame.draw.circle(circle_surface, circle_color, (center_x, center_y), circle_radius)
+
+        return circle_surface
+
+    def draw_move_indicator(self, screen, x: int, y: int) -> None:
+        """Draw the pre-created move indicator at specified position"""
+        screen.blit(self.move_indicator, (x, y))
+
     def draw_board(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
                    possible_moves: List[Tuple[int, int]] = None, flipped: bool = False) -> None:
         """Draw the chess board with pieces"""
@@ -106,21 +129,22 @@ class ChessDisplay:
                 is_light = (row + col) % 2 == 0
                 color = self.LIGHT_SQUARE if is_light else self.DARK_SQUARE
 
-                # Highlight selected square
+                # Highlight selected square only
                 if selected_square and selected_square == (row, col):
                     color = self.SELECTED
-                # Highlight possible moves
-                elif (row, col) in possible_moves:
-                    color = self.HIGHLIGHT
-                
+
                 # Draw the square
-                pygame.draw.rect(screen, color, 
+                pygame.draw.rect(screen, color,
                                (x, y, self.square_size, self.square_size))
-                
+
                 # Draw piece if present
                 piece = board_state.get_piece(row, col)
                 if piece:
                     self.draw_piece(screen, piece, x, y)
+
+                # Draw move indicator circle for possible moves
+                if (row, col) in possible_moves:
+                    self.draw_move_indicator(screen, x, y)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8

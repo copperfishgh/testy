@@ -81,8 +81,8 @@ while running:
                         piece = chess_board.get_piece(square[0], square[1])
                         if piece and piece.color == chess_board.current_turn:
                             selected_square = square
-                            # TODO: Calculate possible moves for the selected piece
-                            possible_moves = []  # Placeholder
+                            # Calculate possible moves for the selected piece
+                            possible_moves = chess_board.get_possible_moves(square[0], square[1])
                     else:
                         # Try to move the piece
                         if square in possible_moves:
@@ -99,7 +99,7 @@ while running:
                             piece = chess_board.get_piece(square[0], square[1])
                             if piece and piece.color == chess_board.current_turn:
                                 selected_square = square
-                                possible_moves = []
+                                possible_moves = chess_board.get_possible_moves(square[0], square[1])
     
     # Draw the chess board (with flip consideration)
     display.update_display(screen, chess_board, selected_square, possible_moves, board_flipped)

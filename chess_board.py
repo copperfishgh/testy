@@ -302,6 +302,145 @@ class BoardState:
         result += "  a b c d e f g h\n"
         return result
 
+    def get_possible_moves(self, row: int, col: int) -> List[Tuple[int, int]]:
+        """Get all possible moves for a piece at the given position"""
+        piece = self.get_piece(row, col)
+        if not piece:
+            return []
+
+        if piece.type == PieceType.PAWN:
+            return self._get_pawn_moves(row, col, piece.color)
+        elif piece.type == PieceType.ROOK:
+            return self._get_rook_moves(row, col, piece.color)
+        elif piece.type == PieceType.KNIGHT:
+            return self._get_knight_moves(row, col, piece.color)
+        elif piece.type == PieceType.BISHOP:
+            return self._get_bishop_moves(row, col, piece.color)
+        elif piece.type == PieceType.QUEEN:
+            return self._get_queen_moves(row, col, piece.color)
+        elif piece.type == PieceType.KING:
+            return self._get_king_moves(row, col, piece.color)
+
+        return []
+
+    def _is_valid_square(self, row: int, col: int) -> bool:
+        """Check if a square is within board bounds"""
+        return 0 <= row < 8 and 0 <= col < 8
+
+    def _is_square_empty_or_enemy(self, row: int, col: int, color: Color) -> bool:
+        """Check if a square is empty or contains an enemy piece"""
+        if not self._is_valid_square(row, col):
+            return False
+        piece = self.get_piece(row, col)
+        return piece is None or piece.color != color
+
+    def _get_pawn_moves(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get possible moves for a pawn"""
+        moves = []
+        direction = -1 if color == Color.WHITE else 1  # White moves up (-1), Black moves down (+1)
+        start_row = 6 if color == Color.WHITE else 1
+
+        # Forward move
+        new_row = row + direction
+        if self._is_valid_square(new_row, col) and self.get_piece(new_row, col) is None:
+            moves.append((new_row, col))
+
+            # Double forward move from starting position
+            if row == start_row:
+                new_row = row + 2 * direction
+                if self._is_valid_square(new_row, col) and self.get_piece(new_row, col) is None:
+                    moves.append((new_row, col))
+
+        # Diagonal captures
+        for dc in [-1, 1]:
+            new_row, new_col = row + direction, col + dc
+            if self._is_valid_square(new_row, new_col):
+                piece = self.get_piece(new_row, new_col)
+                if piece and piece.color != color:
+                    moves.append((new_row, new_col))
+
+        # En passant capture
+        if self.en_passant_target:
+            ep_row, ep_col = self.en_passant_target
+            if row + direction == ep_row and abs(col - ep_col) == 1:
+                moves.append((ep_row, ep_col))
+
+        return moves
+
+    def _get_rook_moves(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get possible moves for a rook"""
+        moves = []
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # Right, Left, Down, Up
+
+        for dr, dc in directions:
+            for i in range(1, 8):
+                new_row, new_col = row + i * dr, col + i * dc
+                if not self._is_valid_square(new_row, new_col):
+                    break
+
+                piece = self.get_piece(new_row, new_col)
+                if piece is None:
+                    moves.append((new_row, new_col))
+                elif piece.color != color:
+                    moves.append((new_row, new_col))
+                    break
+                else:
+                    break
+
+        return moves
+
+    def _get_knight_moves(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get possible moves for a knight"""
+        moves = []
+        knight_moves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+
+        for dr, dc in knight_moves:
+            new_row, new_col = row + dr, col + dc
+            if self._is_square_empty_or_enemy(new_row, new_col, color):
+                moves.append((new_row, new_col))
+
+        return moves
+
+    def _get_bishop_moves(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get possible moves for a bishop"""
+        moves = []
+        directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]  # Diagonal directions
+
+        for dr, dc in directions:
+            for i in range(1, 8):
+                new_row, new_col = row + i * dr, col + i * dc
+                if not self._is_valid_square(new_row, new_col):
+                    break
+
+                piece = self.get_piece(new_row, new_col)
+                if piece is None:
+                    moves.append((new_row, new_col))
+                elif piece.color != color:
+                    moves.append((new_row, new_col))
+                    break
+                else:
+                    break
+
+        return moves
+
+    def _get_queen_moves(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get possible moves for a queen (combination of rook and bishop)"""
+        return self._get_rook_moves(row, col, color) + self._get_bishop_moves(row, col, color)
+
+    def _get_king_moves(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get possible moves for a king"""
+        moves = []
+        king_moves = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+
+        for dr, dc in king_moves:
+            new_row, new_col = row + dr, col + dc
+            if self._is_square_empty_or_enemy(new_row, new_col, color):
+                moves.append((new_row, new_col))
+
+        # TODO: Add castling logic here
+
+        return moves
+
 # Example usage and testing
 if __name__ == "__main__":
     # Create a new board state
