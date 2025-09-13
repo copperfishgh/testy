@@ -122,9 +122,10 @@ class ChessDisplay:
                 if piece:
                     self.draw_piece(screen, piece, x, y)
         
-        # Draw board border
+        # Draw board border (use actual board size based on squares)
+        actual_board_size = self.square_size * 8
         border_rect = pygame.Rect(self.board_offset_x - 2, self.board_offset_y - 2,
-                                self.board_size + 4, self.board_size + 4)
+                                actual_board_size + 4, actual_board_size + 4)
         pygame.draw.rect(screen, self.BLACK, border_rect, 2)
         
         # Draw coordinates
