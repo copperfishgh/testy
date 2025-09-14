@@ -38,16 +38,37 @@ class ChessDisplay:
         if not pygame.get_init():
             pygame.init()
         
-        # Font setup using config values
-        self.font_large = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_LARGE_PERCENTAGE))
-        self.font_medium = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_MEDIUM_PERCENTAGE))
-        self.font_small = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_SMALL_PERCENTAGE))
+        # Font setup using config values - using system fonts for better appearance
+        try:
+            # Try to use a modern system font (Arial, Segoe UI, or similar)
+            self.font_large = pygame.font.SysFont('segoeui,arial,helvetica,sans-serif', int(self.board_size * GameConfig.FONT_LARGE_PERCENTAGE), bold=True)
+            self.font_medium = pygame.font.SysFont('segoeui,arial,helvetica,sans-serif', int(self.board_size * GameConfig.FONT_MEDIUM_PERCENTAGE), bold=False)
+            self.font_small = pygame.font.SysFont('segoeui,arial,helvetica,sans-serif', int(self.board_size * GameConfig.FONT_SMALL_PERCENTAGE), bold=False)
+        except:
+            # Fallback to default if system fonts aren't available
+            self.font_large = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_LARGE_PERCENTAGE))
+            self.font_medium = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_MEDIUM_PERCENTAGE))
+            self.font_small = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_SMALL_PERCENTAGE))
         
         # Load piece images (placeholder - you'd load actual piece images here)
         self.piece_images = self._load_piece_images()
 
         # Create move indicator circle surface once
         self.move_indicator = self._create_move_indicator()
+
+        # Help panel dimensions and positioning
+        self.help_panel_width = int(window_width * GameConfig.HELP_PANEL_WIDTH_PERCENTAGE)
+        self.help_panel_x = self.board_margin_x + self.board_size + int(window_width * GameConfig.HELP_PANEL_MARGIN_PERCENTAGE)
+        self.help_panel_y = self.board_margin_y
+
+        # Checkbox dimensions
+        self.checkbox_size = int(window_width * GameConfig.CHECKBOX_SIZE_PERCENTAGE)
+        self.checkbox_spacing = int(window_height * GameConfig.CHECKBOX_SPACING_PERCENTAGE)
+
+        # Help options
+        self.help_options = [
+            {"name": "Hanging Pieces (h)", "key": "hanging_pieces", "enabled": False}
+        ]
 
         # Checkmate animation variables
         self.checkmate_animation_start_time = None
@@ -88,7 +109,7 @@ class ChessDisplay:
                         surface.fill(self.RGB_WHITE)
                     else:
                         surface.fill(self.RGB_BLACK)
-                    pygame.draw.rect(surface, (100, 100, 100), surface.get_rect(), 2)
+                    pygame.draw.rect(surface, Colors.PIECE_BORDER, surface.get_rect(), 2)
 
                     key = f"{color.value}{piece_type.value}"
                     images[key] = surface
@@ -111,9 +132,111 @@ class ChessDisplay:
 
         return circle_surface
 
+    def draw_help_panel(self, screen) -> None:
+        """Draw the help panel with checkboxes on the right side of the board"""
+        # Draw panel background (optional - subtle background)
+        panel_rect = pygame.Rect(self.help_panel_x, self.help_panel_y,
+                               self.help_panel_width, self.board_size)
+        pygame.draw.rect(screen, Colors.HELP_PANEL_BACKGROUND, panel_rect)
+        pygame.draw.rect(screen, Colors.RGB_BLACK, panel_rect, 1)
+
+        # Draw title
+        title_text = self.font_medium.render("Helpers", True, Colors.BLACK_TEXT)
+        title_y = self.help_panel_y + 20
+        screen.blit(title_text, (self.help_panel_x + 10, title_y))
+
+        # Draw checkboxes
+        current_y = title_y + 50
+        for i, option in enumerate(self.help_options):
+            self._draw_checkbox(screen, self.help_panel_x + 10, current_y, option)
+            current_y += self.checkbox_spacing
+
+    def _draw_checkbox(self, screen, x: int, y: int, option: dict) -> None:
+        """Draw a single stylish checkbox with label"""
+        # Create rounded rectangle effect with layered rectangles
+        corner_radius = 4
+
+        # Draw shadow (slightly offset)
+        shadow_rect = pygame.Rect(x + 2, y + 2, self.checkbox_size, self.checkbox_size)
+        pygame.draw.rect(screen, Colors.CHECKBOX_SHADOW, shadow_rect, border_radius=corner_radius)
+
+        # Main checkbox background
+        checkbox_rect = pygame.Rect(x, y, self.checkbox_size, self.checkbox_size)
+        if option["enabled"]:
+            # Filled background when checked
+            pygame.draw.rect(screen, Colors.ANNOTATION_POSITIVE, checkbox_rect, border_radius=corner_radius)
+        else:
+            # Light background when unchecked
+            pygame.draw.rect(screen, Colors.CHECKBOX_UNCHECKED_BG, checkbox_rect, border_radius=corner_radius)
+
+        # Border
+        border_color = Colors.ANNOTATION_POSITIVE if option["enabled"] else Colors.CHECKBOX_BORDER_UNCHECKED
+        pygame.draw.rect(screen, border_color, checkbox_rect, width=2, border_radius=corner_radius)
+
+        # Draw checkmark if enabled
+        if option["enabled"]:
+            # Draw a more refined checkmark
+            check_color = Colors.RGB_WHITE
+            check_thickness = 3
+            # Smoother checkmark coordinates
+            check_x1 = x + self.checkbox_size * 0.25
+            check_y1 = y + self.checkbox_size * 0.55
+            check_x2 = x + self.checkbox_size * 0.45
+            check_y2 = y + self.checkbox_size * 0.7
+            check_x3 = x + self.checkbox_size * 0.75
+            check_y3 = y + self.checkbox_size * 0.35
+
+            pygame.draw.line(screen, check_color, (check_x1, check_y1), (check_x2, check_y2), check_thickness)
+            pygame.draw.line(screen, check_color, (check_x2, check_y2), (check_x3, check_y3), check_thickness)
+
+        # Draw label with better styling
+        label_text = self.font_small.render(option["name"], True, Colors.LABEL_TEXT_COLOR)
+        label_x = x + self.checkbox_size + 12
+        label_y = y + (self.checkbox_size - label_text.get_height()) // 2
+        screen.blit(label_text, (label_x, label_y))
+
+    def get_checkbox_at_pos(self, mouse_pos: Tuple[int, int]) -> Optional[str]:
+        """Get the key of the checkbox at the given mouse position, if any"""
+        mouse_x, mouse_y = mouse_pos
+
+        current_y = self.help_panel_y + 70  # Starting y position for checkboxes
+        for option in self.help_options:
+            checkbox_rect = pygame.Rect(self.help_panel_x + 10, current_y,
+                                      self.checkbox_size, self.checkbox_size)
+            if checkbox_rect.collidepoint(mouse_x, mouse_y):
+                return option["key"]
+            current_y += self.checkbox_spacing
+
+        return None
+
+    def toggle_help_option(self, key: str) -> bool:
+        """Toggle a help option and return its new state"""
+        for option in self.help_options:
+            if option["key"] == key:
+                option["enabled"] = not option["enabled"]
+                return option["enabled"]
+        return False
+
+    def is_help_option_enabled(self, key: str) -> bool:
+        """Check if a help option is enabled"""
+        for option in self.help_options:
+            if option["key"] == key:
+                return option["enabled"]
+        return False
+
     def draw_move_indicator(self, screen, x: int, y: int) -> None:
         """Draw the pre-created move indicator at specified position"""
         screen.blit(self.move_indicator, (x, y))
+
+    def draw_hanging_piece_indicator(self, screen, x: int, y: int) -> None:
+        """Draw a warning indicator for hanging pieces"""
+        # Draw a red warning border around the square for strong warning
+        border_thickness = 4
+        warning_color = Colors.ANNOTATION_WARNING
+
+        # Draw border on all four edges
+        border_rect = pygame.Rect(x, y, self.square_size, self.square_size)
+        pygame.draw.rect(screen, warning_color, border_rect, border_thickness)
 
     def start_checkmate_animation(self, board_state: BoardState) -> None:
         """Start the checkmate animation for the losing king"""
@@ -194,6 +317,12 @@ class ChessDisplay:
                 # Draw move indicator circle for possible moves
                 if (row, col) in highlighted_moves:
                     self.draw_move_indicator(screen, x, y)
+
+                # Draw hanging piece indicator if enabled
+                if self.is_help_option_enabled("hanging_pieces") and piece:
+                    hanging_pieces = board_state.get_hanging_pieces(piece.color)
+                    if (row, col) in hanging_pieces:
+                        self.draw_hanging_piece_indicator(screen, x, y)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
@@ -308,16 +437,16 @@ class ChessDisplay:
         status_y = castling_y + 120
         if board_state.is_in_checkmate:
             status_text = "CHECKMATE!"
-            status_color = (255, 0, 0)  # Red
+            status_color = Colors.STATUS_CHECKMATE
         elif board_state.is_in_stalemate:
             status_text = "STALEMATE"
-            status_color = (255, 165, 0)  # Orange
+            status_color = Colors.STATUS_CAPTURE
         elif board_state.is_check:
             status_text = "CHECK"
-            status_color = (255, 0, 0)  # Red
+            status_color = Colors.STATUS_CHECK
         else:
             status_text = "Game in Progress"
-            status_color = (0, 128, 0)  # Green
+            status_color = Colors.STATUS_NORMAL
         
         self.draw_text(screen, status_text, info_x, status_y, self.font_medium, status_color)
     
@@ -376,6 +505,7 @@ class ChessDisplay:
 
         # Draw all components
         self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped)
+        self.draw_help_panel(screen)
 
         # Draw stalemate overlay if needed
         if board_state.is_in_stalemate:
@@ -399,7 +529,7 @@ class ChessDisplay:
 
         # Draw stalemate message in bright red
         stalemate_text = "STALEMATE"
-        text_surface = stamp_font.render(stalemate_text, True, (255, 0, 0))  # Bright red text
+        text_surface = stamp_font.render(stalemate_text, True, Colors.STALEMATE_TEXT)
 
         # Scale text to exactly match board width
         text_width = text_surface.get_width()
@@ -412,7 +542,7 @@ class ChessDisplay:
         rotated_surface = pygame.transform.rotate(text_surface, 30)
 
         # Create black outline for the rotated text
-        outline_surface = stamp_font.render(stalemate_text, True, (0, 0, 0))
+        outline_surface = stamp_font.render(stalemate_text, True, Colors.STALEMATE_OUTLINE)
         outline_surface = pygame.transform.smoothscale(outline_surface, (new_width, new_height))
         rotated_outline = pygame.transform.rotate(outline_surface, 30)
 

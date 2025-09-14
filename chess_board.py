@@ -139,6 +139,11 @@ class BoardState:
     # Undo/Redo functionality
     undo_stack: List['BoardState'] = field(default_factory=list)
     redo_stack: List['BoardState'] = field(default_factory=list)
+
+    # Cached hanging pieces (updated only when board changes)
+    _cached_hanging_pieces_white: List[Tuple[int, int]] = field(default_factory=list)
+    _cached_hanging_pieces_black: List[Tuple[int, int]] = field(default_factory=list)
+    _hanging_pieces_cache_valid: bool = False
     
     def __post_init__(self):
         """Initialize the board with starting position"""
@@ -193,10 +198,15 @@ class BoardState:
     
     def is_square_attacked(self, row: int, col: int, by_color: Color) -> bool:
         """Check if a square is attacked by pieces of a specific color."""
+
         # Check for pawn attacks
-        pawn_direction = 1 if by_color == Color.WHITE else -1
+        # White pawns attack from row+1 (lower rank), black pawns attack from row-1 (higher rank)
+        if by_color == Color.WHITE:
+            attack_row = row + 1  # White pawns attack from below
+        else:
+            attack_row = row - 1  # Black pawns attack from above
+
         for dc in [-1, 1]:
-            attack_row = row - pawn_direction
             attack_col = col + dc
             if self._is_valid_square(attack_row, attack_col):
                 piece = self.get_piece(attack_row, attack_col)
@@ -284,7 +294,137 @@ class BoardState:
                     return False
         
         return True
-    
+
+    def get_hanging_pieces(self, color: Color) -> List[Tuple[int, int]]:
+        """Get list of hanging pieces for the given color. Uses caching for performance."""
+        if not self._hanging_pieces_cache_valid:
+            self._update_hanging_pieces_cache()
+
+        if color == Color.WHITE:
+            return self._cached_hanging_pieces_white.copy()
+        else:
+            return self._cached_hanging_pieces_black.copy()
+
+    def _update_hanging_pieces_cache(self) -> None:
+        """Update the cached hanging pieces for both colors"""
+        self._cached_hanging_pieces_white = []
+        self._cached_hanging_pieces_black = []
+
+        # Check all pieces on the board
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece(row, col)
+                if piece:
+                    if self._is_piece_hanging_simple(row, col):
+                        if piece.color == Color.WHITE:
+                            self._cached_hanging_pieces_white.append((row, col))
+                        else:
+                            self._cached_hanging_pieces_black.append((row, col))
+
+        self._hanging_pieces_cache_valid = True
+
+    def _invalidate_hanging_pieces_cache(self) -> None:
+        """Invalidate the hanging pieces cache (call when board changes)"""
+        self._hanging_pieces_cache_valid = False
+
+    def _is_piece_hanging_simple(self, row: int, col: int) -> bool:
+        """Simple check: is piece attacked but not defended?"""
+        piece = self.get_piece(row, col)
+        if not piece:
+            return False
+
+        enemy_color = Color.BLACK if piece.color == Color.WHITE else Color.WHITE
+
+
+        # Step 1: Is it attacked by an enemy?
+        if not self.is_square_attacked(row, col, enemy_color):
+            return False
+
+        # Step 2: Is it defended by a friendly piece?
+        if self.is_square_attacked(row, col, piece.color):
+            return False  # It's defended, so not hanging
+
+        return True  # Attacked but not defended = hanging
+
+    def _get_attackers(self, target_row: int, target_col: int, attacker_color: Color) -> List[Tuple[int, int]]:
+        """Get all pieces of the given color that attack the target square"""
+        attackers = []
+
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece(row, col)
+                if piece and piece.color == attacker_color:
+                    # Check if this piece can attack the target square
+                    possible_moves = self._get_piece_attacks(row, col)
+                    if (target_row, target_col) in possible_moves:
+                        attackers.append((row, col))
+
+        return attackers
+
+    def _get_piece_attacks(self, row: int, col: int) -> List[Tuple[int, int]]:
+        """Get all squares this piece attacks (not filtered by check legality)"""
+        piece = self.get_piece(row, col)
+        if not piece:
+            return []
+
+        if piece.type == PieceType.PAWN:
+            return self._get_pawn_attacks(row, col, piece.color)
+        elif piece.type == PieceType.ROOK:
+            return self._get_rook_moves(row, col, piece.color)
+        elif piece.type == PieceType.KNIGHT:
+            return self._get_knight_moves(row, col, piece.color)
+        elif piece.type == PieceType.BISHOP:
+            return self._get_bishop_moves(row, col, piece.color)
+        elif piece.type == PieceType.QUEEN:
+            return self._get_queen_moves(row, col, piece.color)
+        elif piece.type == PieceType.KING:
+            return self._get_king_attacks(row, col, piece.color)
+
+        return []
+
+    def _get_pawn_attacks(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get squares a pawn attacks (diagonal captures only)"""
+        attacks = []
+        direction = -1 if color == Color.WHITE else 1
+
+        # Check diagonal attacks
+        for dc in [-1, 1]:
+            attack_row = row + direction
+            attack_col = col + dc
+            if self._is_valid_square(attack_row, attack_col):
+                attacks.append((attack_row, attack_col))
+
+        return attacks
+
+    def _get_king_attacks(self, row: int, col: int, color: Color) -> List[Tuple[int, int]]:
+        """Get squares a king attacks (excludes castling)"""
+        attacks = []
+        king_moves = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+
+        for dr, dc in king_moves:
+            new_row, new_col = row + dr, col + dc
+            if self._is_valid_square(new_row, new_col):
+                attacks.append((new_row, new_col))
+
+        return attacks
+
+    def _get_piece_value(self, row: int, col: int) -> int:
+        """Get the standard chess piece value"""
+        piece = self.get_piece(row, col)
+        if not piece:
+            return 0
+
+        values = {
+            PieceType.PAWN: 1,
+            PieceType.KNIGHT: 3,
+            PieceType.BISHOP: 3,
+            PieceType.ROOK: 5,
+            PieceType.QUEEN: 9,
+            PieceType.KING: 100  # King is invaluable
+        }
+
+        return values.get(piece.type, 0)
+
     def get_fen_position(self) -> str:
         """Generate FEN (Forsyth-Edwards Notation) string for the current position"""
         fen_parts = []
@@ -603,6 +743,9 @@ class BoardState:
 
         # Save state for undo before making the move
         self._save_state_for_undo()
+
+        # Invalidate hanging pieces cache since board will change
+        self._invalidate_hanging_pieces_cache()
 
         # Store captured piece for move history
         captured_piece = self.get_piece(to_row, to_col)
