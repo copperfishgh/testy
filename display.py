@@ -7,6 +7,8 @@ It provides functionality to display the board, pieces, and game information.
 
 from typing import Optional, Tuple, List
 import pygame
+import json
+import os
 from chess_board import BoardState, Piece, Color, PieceType
 from config import GameConfig, Colors, AnimationConfig, GameConstants
 
@@ -65,10 +67,12 @@ class ChessDisplay:
         self.checkbox_size = int(window_width * GameConfig.CHECKBOX_SIZE_PERCENTAGE)
         self.checkbox_spacing = int(window_height * GameConfig.CHECKBOX_SPACING_PERCENTAGE)
 
-        # Help options
+        # Help options - load from settings file if available
+        self.settings_file = ".testy"
         self.help_options = [
             {"name": "Hanging Pieces (h)", "key": "hanging_pieces", "enabled": False}
         ]
+        self._load_settings()
 
         # Checkmate animation variables
         self.checkmate_animation_start_time = None
@@ -214,6 +218,7 @@ class ChessDisplay:
         for option in self.help_options:
             if option["key"] == key:
                 option["enabled"] = not option["enabled"]
+                self._save_settings()  # Save settings when changed
                 return option["enabled"]
         return False
 
@@ -228,15 +233,19 @@ class ChessDisplay:
         """Draw the pre-created move indicator at specified position"""
         screen.blit(self.move_indicator, (x, y))
 
-    def draw_hanging_piece_indicator(self, screen, x: int, y: int) -> None:
-        """Draw a warning indicator for hanging pieces"""
-        # Draw a red warning border around the square for strong warning
+    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_active_player: bool) -> None:
+        """Draw an indicator for hanging pieces - red for active player (danger), green for opponent (opportunity)"""
         border_thickness = 4
-        warning_color = Colors.ANNOTATION_WARNING
+
+        # Choose color based on whether it's the active player's piece or opponent's
+        if is_active_player:
+            indicator_color = Colors.ANNOTATION_WARNING  # Red for player's hanging pieces (danger)
+        else:
+            indicator_color = Colors.ANNOTATION_POSITIVE  # Green for opponent's hanging pieces (opportunity)
 
         # Draw border on all four edges
         border_rect = pygame.Rect(x, y, self.square_size, self.square_size)
-        pygame.draw.rect(screen, warning_color, border_rect, border_thickness)
+        pygame.draw.rect(screen, indicator_color, border_rect, border_thickness)
 
     def is_animation_active(self) -> bool:
         """Check if any animations are currently running"""
@@ -326,7 +335,9 @@ class ChessDisplay:
                 if self.is_help_option_enabled("hanging_pieces") and piece:
                     hanging_pieces = board_state.get_hanging_pieces(piece.color)
                     if (row, col) in hanging_pieces:
-                        self.draw_hanging_piece_indicator(screen, x, y)
+                        # Determine if this piece belongs to the active player
+                        is_active_player = (piece.color == board_state.current_turn)
+                        self.draw_hanging_piece_indicator(screen, x, y, is_active_player)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
@@ -645,6 +656,35 @@ class ChessDisplay:
                         return PieceType.KNIGHT
                     elif event.key == pygame.K_ESCAPE:
                         return PieceType.QUEEN  # Default to queen
+
+    def _load_settings(self) -> None:
+        """Load checkbox states from settings file"""
+        try:
+            if os.path.exists(self.settings_file):
+                with open(self.settings_file, 'r') as f:
+                    settings = json.load(f)
+
+                # Update help options with saved states
+                for option in self.help_options:
+                    key = option["key"]
+                    if key in settings:
+                        option["enabled"] = settings[key]
+        except (json.JSONDecodeError, IOError):
+            # If settings file is corrupted or unreadable, continue with defaults
+            pass
+
+    def _save_settings(self) -> None:
+        """Save checkbox states to settings file"""
+        try:
+            settings = {}
+            for option in self.help_options:
+                settings[option["key"]] = option["enabled"]
+
+            with open(self.settings_file, 'w') as f:
+                json.dump(settings, f, indent=2)
+        except IOError:
+            # If we can't save settings, continue silently (don't crash the game)
+            pass
 
     def quit(self) -> None:
         """Clean up Pygame resources"""
