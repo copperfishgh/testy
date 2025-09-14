@@ -311,6 +311,86 @@ class ChessDisplay:
         
         # Note: pygame.display.flip() is called in the main loop, not here
     
+    def show_promotion_dialog(self, screen, color: Color) -> PieceType:
+        """Show promotion dialog and return selected piece type"""
+        # Define promotion pieces (Queen, Rook, Bishop, Knight)
+        promotion_pieces = [PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT]
+
+        # Dialog dimensions
+        dialog_width = 400
+        dialog_height = 150
+        dialog_x = (self.window_width - dialog_width) // 2
+        dialog_y = (self.window_height - dialog_height) // 2
+
+        # Create semi-transparent overlay
+        overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))  # Semi-transparent black
+        screen.blit(overlay, (0, 0))
+
+        # Draw dialog box
+        dialog_rect = pygame.Rect(dialog_x, dialog_y, dialog_width, dialog_height)
+        pygame.draw.rect(screen, self.WHITE, dialog_rect)
+        pygame.draw.rect(screen, self.BLACK, dialog_rect, 3)
+
+        # Draw title
+        title_text = "Choose promotion piece:"
+        title_surface = self.font_medium.render(title_text, True, self.BLACK)
+        title_rect = title_surface.get_rect(center=(dialog_x + dialog_width//2, dialog_y + 30))
+        screen.blit(title_surface, title_rect)
+
+        # Draw piece options
+        piece_size = 60
+        piece_spacing = (dialog_width - 4 * piece_size) // 5
+        piece_rects = []
+
+        for i, piece_type in enumerate(promotion_pieces):
+            piece_x = dialog_x + piece_spacing + i * (piece_size + piece_spacing)
+            piece_y = dialog_y + 70
+            piece_rect = pygame.Rect(piece_x, piece_y, piece_size, piece_size)
+            piece_rects.append((piece_rect, piece_type))
+
+            # Draw piece background
+            pygame.draw.rect(screen, self.LIGHT_SQUARE, piece_rect)
+            pygame.draw.rect(screen, self.BLACK, piece_rect, 2)
+
+            # Draw piece image or text
+            key = f"{color.value}{piece_type.value}"
+            if key in self.piece_images:
+                # Scale the piece image to fit
+                piece_surface = pygame.transform.smoothscale(self.piece_images[key], (piece_size - 10, piece_size - 10))
+                piece_x_centered = piece_x + (piece_size - piece_surface.get_width()) // 2
+                piece_y_centered = piece_y + (piece_size - piece_surface.get_height()) // 2
+                screen.blit(piece_surface, (piece_x_centered, piece_y_centered))
+            else:
+                # Fallback to text
+                piece_text = piece_type.value
+                text_surface = self.font_large.render(piece_text, True, self.BLACK)
+                text_rect = text_surface.get_rect(center=piece_rect.center)
+                screen.blit(text_surface, text_rect)
+
+        pygame.display.flip()
+
+        # Wait for user selection
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = event.pos
+                    for piece_rect, piece_type in piece_rects:
+                        if piece_rect.collidepoint(mouse_pos):
+                            return piece_type
+                elif event.type == pygame.KEYDOWN:
+                    # Keyboard shortcuts
+                    if event.key == pygame.K_q:
+                        return PieceType.QUEEN
+                    elif event.key == pygame.K_r:
+                        return PieceType.ROOK
+                    elif event.key == pygame.K_b:
+                        return PieceType.BISHOP
+                    elif event.key == pygame.K_n:
+                        return PieceType.KNIGHT
+                    elif event.key == pygame.K_ESCAPE:
+                        return PieceType.QUEEN  # Default to queen
+
     def quit(self) -> None:
         """Clean up Pygame resources"""
         pygame.quit()

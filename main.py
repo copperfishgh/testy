@@ -86,17 +86,35 @@ while running:
                     else:
                         # Try to move the piece
                         if square in possible_moves:
-                            # Execute the move
-                            move_successful = chess_board.make_move(
-                                selected_square[0], selected_square[1],
-                                square[0], square[1]
-                            )
-                            if move_successful:
-                                print(f"Move from {selected_square} to {square}")
-                                selected_square = None
-                                possible_moves = []
+                            # Check if this is a pawn promotion
+                            if chess_board.is_pawn_promotion(selected_square[0], selected_square[1], square[0], square[1]):
+                                # Show promotion dialog
+                                current_piece = chess_board.get_piece(selected_square[0], selected_square[1])
+                                promotion_piece = display.show_promotion_dialog(screen, current_piece.color)
+
+                                # Execute the move with promotion
+                                move_successful = chess_board.make_move_with_promotion(
+                                    selected_square[0], selected_square[1],
+                                    square[0], square[1], promotion_piece
+                                )
+                                if move_successful:
+                                    print(f"Promotion move from {selected_square} to {square}, promoted to {promotion_piece.value}")
+                                else:
+                                    print("Promotion move failed!")
                             else:
-                                print("Move failed!")  # This shouldn't happen if move validation works
+                                # Execute regular move
+                                move_successful = chess_board.make_move(
+                                    selected_square[0], selected_square[1],
+                                    square[0], square[1]
+                                )
+                                if move_successful:
+                                    print(f"Move from {selected_square} to {square}")
+                                else:
+                                    print("Move failed!")  # This shouldn't happen if move validation works
+
+                            # Clear selection regardless
+                            selected_square = None
+                            possible_moves = []
                         elif square == selected_square:
                             # Deselect
                             selected_square = None
