@@ -20,11 +20,11 @@ screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Chess Game")
 
 # Colors (RGB)
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-BUTTON_COLOR = (100, 100, 100)
-BUTTON_HOVER = (150, 150, 150)
-BUTTON_TEXT = (255, 255, 255)
+RGB_WHITE = (255, 255, 255)
+RGB_BLACK = (0, 0, 0)
+BUTTON_BACKGROUND_COLOR = (100, 100, 100)
+BUTTON_HOVER_COLOR = (150, 150, 150)
+BUTTON_TEXT_COLOR = (255, 255, 255)
 
 # Initialize mixer for sounds
 pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
@@ -83,8 +83,8 @@ except Exception as e:
     print(f"Could not create pygame sound, using system beep: {e}")
     error_sound = None
 
-# Create global chess board in starting position
-chess_board = BoardState()
+# Create global board state in starting position
+board_state = BoardState()
 
 # Create display object
 display = ChessDisplay(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -101,32 +101,32 @@ font_size = int(WINDOW_WIDTH * 0.05)  # 5% of window width
 font = pygame.font.Font(None, font_size)
 
 # Game state
-board_flipped = False
-selected_square = None
-possible_moves = []
+is_board_flipped = False
+selected_square_coords = None
+highlighted_moves = []
 
 # Main game loop
-running = True
+is_running = True
 clock = pygame.time.Clock()
 
-while running:
+while is_running:
     # Handle events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            is_running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                running = False
+                is_running = False
             elif event.key == pygame.K_f:  # F key to flip board
-                board_flipped = not board_flipped
+                is_board_flipped = not is_board_flipped
             elif event.key == pygame.K_u:  # U key to undo
-                if chess_board.can_undo():
-                    success = chess_board.undo_move()
+                if board_state.can_undo():
+                    success = board_state.undo_move()
                     if success:
                         print("Move undone")
                         # Clear any current selection
-                        selected_square = None
-                        possible_moves = []
+                        selected_square_coords = None
+                        highlighted_moves = []
                     else:
                         print("Undo failed")
                         if error_sound:
@@ -140,13 +140,13 @@ while running:
                     else:
                         play_error_beep()
             elif event.key == pygame.K_r:  # R key to redo
-                if chess_board.can_redo():
-                    success = chess_board.redo_move()
+                if board_state.can_redo():
+                    success = board_state.redo_move()
                     if success:
                         print("Move redone")
                         # Clear any current selection
-                        selected_square = None
-                        possible_moves = []
+                        selected_square_coords = None
+                        highlighted_moves = []
                     else:
                         print("Redo failed")
                         if error_sound:
@@ -164,76 +164,76 @@ while running:
             
             # Check if flip button was clicked
             if flip_button_rect.collidepoint(mouse_pos):
-                board_flipped = not board_flipped
+                is_board_flipped = not is_board_flipped
             else:
                 # Handle board clicks for piece selection/movement
                 square = display.get_square_from_mouse(mouse_pos)
                 if square:
                     # Convert square coordinates if board is flipped
-                    if board_flipped:
+                    if is_board_flipped:
                         square = (7 - square[0], 7 - square[1])
                     
-                    if selected_square is None:
+                    if selected_square_coords is None:
                         # Select a piece
-                        piece = chess_board.get_piece(square[0], square[1])
-                        if piece and piece.color == chess_board.current_turn:
-                            selected_square = square
+                        piece = board_state.get_piece(square[0], square[1])
+                        if piece and piece.color == board_state.current_turn:
+                            selected_square_coords = square
                             # Calculate possible moves for the selected piece
-                            possible_moves = chess_board.get_possible_moves(square[0], square[1])
+                            highlighted_moves = board_state.get_possible_moves(square[0], square[1])
                     else:
                         # Try to move the piece
-                        if square in possible_moves:
+                        if square in highlighted_moves:
                             # Check if this is a pawn promotion
-                            if chess_board.is_pawn_promotion(selected_square[0], selected_square[1], square[0], square[1]):
+                            if board_state.is_pawn_promotion(selected_square_coords[0], selected_square_coords[1], square[0], square[1]):
                                 # Show promotion dialog
-                                current_piece = chess_board.get_piece(selected_square[0], selected_square[1])
+                                current_piece = board_state.get_piece(selected_square_coords[0], selected_square_coords[1])
                                 promotion_piece = display.show_promotion_dialog(screen, current_piece.color)
 
                                 # Execute the move with promotion
-                                move_successful = chess_board.make_move_with_promotion(
-                                    selected_square[0], selected_square[1],
+                                move_successful = board_state.make_move_with_promotion(
+                                    selected_square_coords[0], selected_square_coords[1],
                                     square[0], square[1], promotion_piece
                                 )
                                 if move_successful:
-                                    print(f"Promotion move from {selected_square} to {square}, promoted to {promotion_piece.value}")
+                                    print(f"Promotion move from {selected_square_coords} to {square}, promoted to {promotion_piece.value}")
                                 else:
                                     print("Promotion move failed!")
                             else:
                                 # Execute regular move
-                                move_successful = chess_board.make_move(
-                                    selected_square[0], selected_square[1],
+                                move_successful = board_state.make_move(
+                                    selected_square_coords[0], selected_square_coords[1],
                                     square[0], square[1]
                                 )
                                 if move_successful:
-                                    print(f"Move from {selected_square} to {square}")
+                                    print(f"Move from {selected_square_coords} to {square}")
                                 else:
                                     print("Move failed!")  # This shouldn't happen if move validation works
 
                             # Clear selection regardless
-                            selected_square = None
-                            possible_moves = []
-                        elif square == selected_square:
+                            selected_square_coords = None
+                            highlighted_moves = []
+                        elif square == selected_square_coords:
                             # Deselect
-                            selected_square = None
-                            possible_moves = []
+                            selected_square_coords = None
+                            highlighted_moves = []
                         else:
                             # Select different piece
-                            piece = chess_board.get_piece(square[0], square[1])
-                            if piece and piece.color == chess_board.current_turn:
-                                selected_square = square
-                                possible_moves = chess_board.get_possible_moves(square[0], square[1])
+                            piece = board_state.get_piece(square[0], square[1])
+                            if piece and piece.color == board_state.current_turn:
+                                selected_square_coords = square
+                                highlighted_moves = board_state.get_possible_moves(square[0], square[1])
     
     # Draw the chess board (with flip consideration)
-    display.update_display(screen, chess_board, selected_square, possible_moves, board_flipped)
+    display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped)
     
     # Draw flip button
-    button_color = BUTTON_HOVER if flip_button_rect.collidepoint(pygame.mouse.get_pos()) else BUTTON_COLOR
+    button_color = BUTTON_HOVER_COLOR if flip_button_rect.collidepoint(pygame.mouse.get_pos()) else BUTTON_BACKGROUND_COLOR
     pygame.draw.rect(screen, button_color, flip_button_rect)
-    pygame.draw.rect(screen, BLACK, flip_button_rect, 2)  # Border
+    pygame.draw.rect(screen, RGB_BLACK, flip_button_rect, 2)  # Border
     
     # Draw button text
-    button_text = "Flip Board" if not board_flipped else "Unflip Board"
-    text_surface = font.render(button_text, True, BUTTON_TEXT)
+    button_text = "Flip Board" if not is_board_flipped else "Unflip Board"
+    text_surface = font.render(button_text, True, BUTTON_TEXT_COLOR)
     text_rect = text_surface.get_rect(center=flip_button_rect.center)
     screen.blit(text_surface, text_rect)
     

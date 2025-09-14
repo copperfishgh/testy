@@ -18,8 +18,8 @@ class ChessDisplay:
         self.window_height = window_height
         
         # Colors
-        self.WHITE = (255, 255, 255)
-        self.BLACK = (0, 0, 0)
+        self.RGB_WHITE = (255, 255, 255)
+        self.RGB_BLACK = (0, 0, 0)
         self.LIGHT_SQUARE = (240, 217, 181)  # Light brown
         self.DARK_SQUARE = (181, 136, 99)    # Dark brown
         self.HIGHLIGHT = (255, 255, 0)       # Yellow for highlights
@@ -30,8 +30,8 @@ class ChessDisplay:
         self.square_size = self.board_size // 8
         
         # Position board with percentage-based margins
-        self.board_offset_x = int(window_width * 0.07)  # 7% margin from left
-        self.board_offset_y = int(window_height * 0.07)  # 7% margin from top
+        self.board_margin_x = int(window_width * 0.07)  # 7% margin from left
+        self.board_margin_y = int(window_height * 0.07)  # 7% margin from top
         
         # Ensure pygame is initialized before creating fonts
         if not pygame.get_init():
@@ -84,9 +84,9 @@ class ChessDisplay:
                     # Create a fallback colored rectangle if image loading fails
                     surface = pygame.Surface((piece_size, piece_size))
                     if color == Color.WHITE:
-                        surface.fill(self.WHITE)
+                        surface.fill(self.RGB_WHITE)
                     else:
-                        surface.fill(self.BLACK)
+                        surface.fill(self.RGB_BLACK)
                     pygame.draw.rect(surface, (100, 100, 100), surface.get_rect(), 2)
 
                     key = f"{color.value}{piece_type.value}"
@@ -154,31 +154,31 @@ class ChessDisplay:
         else:
             # Fallback to text
             piece_text = str(piece)
-            text_surface = self.font_large.render(piece_text, True, self.BLACK)
+            text_surface = self.font_large.render(piece_text, True, self.RGB_BLACK)
             text_rect = text_surface.get_rect(center=(x + self.square_size//2, y + self.square_size//2))
             screen.blit(text_surface, text_rect)
 
-    def draw_board(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
-                   possible_moves: List[Tuple[int, int]] = None, flipped: bool = False) -> None:
+    def draw_board(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
+                   highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False) -> None:
         """Draw the chess board with pieces"""
-        if possible_moves is None:
-            possible_moves = []
+        if highlighted_moves is None:
+            highlighted_moves = []
         
         # Draw the board squares
         for row in range(8):
             for col in range(8):
                 # Apply flipping transformation
-                display_row = (7 - row) if flipped else row
-                display_col = (7 - col) if flipped else col
-                x = self.board_offset_x + display_col * self.square_size
-                y = self.board_offset_y + display_row * self.square_size
+                display_row = (7 - row) if is_board_flipped else row
+                display_col = (7 - col) if is_board_flipped else col
+                x = self.board_margin_x + display_col * self.square_size
+                y = self.board_margin_y + display_row * self.square_size
                 
                 # Determine square color (use original coordinates for coloring)
                 is_light = (row + col) % 2 == 0
                 color = self.LIGHT_SQUARE if is_light else self.DARK_SQUARE
 
                 # Highlight selected square only
-                if selected_square and selected_square == (row, col):
+                if selected_square_coords and selected_square_coords == (row, col):
                     color = self.SELECTED
 
                 # Draw the square
@@ -191,17 +191,17 @@ class ChessDisplay:
                     self.draw_piece(screen, piece, x, y, row, col)
 
                 # Draw move indicator circle for possible moves
-                if (row, col) in possible_moves:
+                if (row, col) in highlighted_moves:
                     self.draw_move_indicator(screen, x, y)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
-        border_rect = pygame.Rect(self.board_offset_x - 2, self.board_offset_y - 2,
+        border_rect = pygame.Rect(self.board_margin_x - 2, self.board_margin_y - 2,
                                 actual_board_size + 4, actual_board_size + 4)
-        pygame.draw.rect(screen, self.BLACK, border_rect, 2)
+        pygame.draw.rect(screen, self.RGB_BLACK, border_rect, 2)
         
         # Draw coordinates
-        self.draw_coordinates(screen, flipped)
+        self.draw_coordinates(screen, is_board_flipped)
     
     def draw_piece(self, screen, piece: Piece, x: int, y: int, board_row: int = -1, board_col: int = -1) -> None:
         """Draw a piece at the specified screen coordinates"""
@@ -227,37 +227,37 @@ class ChessDisplay:
         else:
             # Fallback: draw piece as text
             piece_text = str(piece)
-            text_surface = self.font_large.render(piece_text, True, self.BLACK)
+            text_surface = self.font_large.render(piece_text, True, self.RGB_BLACK)
             text_rect = text_surface.get_rect(center=(x + self.square_size//2, y + self.square_size//2))
             screen.blit(text_surface, text_rect)
     
-    def draw_coordinates(self, screen, flipped: bool = False) -> None:
+    def draw_coordinates(self, screen, is_board_flipped: bool = False) -> None:
         """Draw board coordinates (a-h, 1-8)"""
         # Draw file letters (a-h)
         for col in range(8):
-            letter = chr(ord('a') + (7 - col if flipped else col))
-            x = self.board_offset_x + col * self.square_size + self.square_size // 2
-            y = self.board_offset_y + self.board_size + 10
+            letter = chr(ord('a') + (7 - col if is_board_flipped else col))
+            x = self.board_margin_x + col * self.square_size + self.square_size // 2
+            y = self.board_margin_y + self.board_size + 10
             
-            text_surface = self.font_small.render(letter, True, self.BLACK)
+            text_surface = self.font_small.render(letter, True, self.RGB_BLACK)
             text_rect = text_surface.get_rect(center=(x, y))
             screen.blit(text_surface, text_rect)
         
         # Draw rank numbers (1-8)
         for row in range(8):
-            number = str((row + 1) if flipped else (8 - row))
-            x = self.board_offset_x - 20
-            y = self.board_offset_y + row * self.square_size + self.square_size // 2
+            number = str((row + 1) if is_board_flipped else (8 - row))
+            x = self.board_margin_x - 20
+            y = self.board_margin_y + row * self.square_size + self.square_size // 2
             
-            text_surface = self.font_small.render(number, True, self.BLACK)
+            text_surface = self.font_small.render(number, True, self.RGB_BLACK)
             text_rect = text_surface.get_rect(center=(x, y))
             screen.blit(text_surface, text_rect)
     
     def draw_game_info(self, screen, board_state: BoardState) -> None:
         """Draw game information panel"""
         # Position info panel to the right of the board with minimal spacing
-        info_x = self.board_offset_x + self.board_size + 10
-        info_y = self.board_offset_y
+        info_x = self.board_margin_x + self.board_size + 10
+        info_y = self.board_margin_y
         line_height = 30
         
         # Current turn
@@ -305,10 +305,10 @@ class ChessDisplay:
         
         # Game status
         status_y = castling_y + 120
-        if board_state.checkmate_flag:
+        if board_state.is_in_checkmate:
             status_text = "CHECKMATE!"
             status_color = (255, 0, 0)  # Red
-        elif board_state.stalemate_flag:
+        elif board_state.is_in_stalemate:
             status_text = "STALEMATE"
             status_color = (255, 165, 0)  # Orange
         elif board_state.is_check:
@@ -324,7 +324,7 @@ class ChessDisplay:
                   color: Tuple[int, int, int] = None) -> None:
         """Draw text at the specified position"""
         if color is None:
-            color = self.BLACK
+            color = self.RGB_BLACK
         
         text_surface = font.render(text, True, color)
         screen.blit(text_surface, (x, y))
@@ -334,11 +334,11 @@ class ChessDisplay:
         mouse_x, mouse_y = mouse_pos
         
         # Check if mouse is within board bounds
-        if (self.board_offset_x <= mouse_x <= self.board_offset_x + self.board_size and
-            self.board_offset_y <= mouse_y <= self.board_offset_y + self.board_size):
+        if (self.board_margin_x <= mouse_x <= self.board_margin_x + self.board_size and
+            self.board_margin_y <= mouse_y <= self.board_margin_y + self.board_size):
             
-            col = (mouse_x - self.board_offset_x) // self.square_size
-            row = (mouse_y - self.board_offset_y) // self.square_size
+            col = (mouse_x - self.board_margin_x) // self.square_size
+            row = (mouse_y - self.board_margin_y) // self.square_size
             
             if 0 <= row < 8 and 0 <= col < 8:
                 return (row, col)
@@ -347,8 +347,8 @@ class ChessDisplay:
     
     def draw_move_history(self, screen, board_state: BoardState, max_moves: int = 10) -> None:
         """Draw recent move history"""
-        history_x = self.board_offset_x
-        history_y = self.board_offset_y + self.board_size + 10
+        history_x = self.board_margin_x
+        history_y = self.board_margin_y + self.board_size + 10
         line_height = 20
         
         self.draw_text(screen, "Recent Moves:", history_x, history_y, self.font_medium)
@@ -359,21 +359,25 @@ class ChessDisplay:
             move_text = f"{i+1}. {move.notation}"
             self.draw_text(screen, move_text, history_x, history_y + 30 + i * line_height, self.font_small)
     
-    def update_display(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
-                      possible_moves: List[Tuple[int, int]] = None, flipped: bool = False) -> None:
+    def update_display(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
+                      highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False) -> None:
         """Update the entire display"""
         # Check for checkmate and start animation if needed
-        if board_state.checkmate_flag and self.checkmate_animation_start_time is None:
+        if board_state.is_in_checkmate and self.checkmate_animation_start_time is None:
             self.start_checkmate_animation(board_state)
+        elif not board_state.is_in_checkmate and self.checkmate_animation_start_time is not None:
+            # Reset animation state if we're no longer in checkmate (e.g., after undo)
+            self.checkmate_animation_start_time = None
+            self.checkmate_king_position = None
 
         # Clear screen
-        screen.fill(self.WHITE)
+        screen.fill(self.RGB_WHITE)
 
         # Draw all components
-        self.draw_board(screen, board_state, selected_square, possible_moves, flipped)
+        self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped)
 
         # Draw stalemate overlay if needed
-        if board_state.stalemate_flag:
+        if board_state.is_in_stalemate:
             self.draw_stalemate_overlay(screen)
 
         # Note: pygame.display.flip() is called in the main loop, not here
@@ -412,8 +416,8 @@ class ChessDisplay:
         rotated_outline = pygame.transform.rotate(outline_surface, 30)
 
         # Center the rotated text on the board (not the whole window)
-        board_center_x = self.board_offset_x + (self.square_size * 8) // 2
-        board_center_y = self.board_offset_y + (self.square_size * 8) // 2
+        board_center_x = self.board_margin_x + (self.square_size * 8) // 2
+        board_center_y = self.board_margin_y + (self.square_size * 8) // 2
 
         rotated_rect = rotated_surface.get_rect(center=(board_center_x, board_center_y))
         outline_rect = rotated_outline.get_rect(center=(board_center_x, board_center_y))
@@ -445,12 +449,12 @@ class ChessDisplay:
 
         # Draw dialog box
         dialog_rect = pygame.Rect(dialog_x, dialog_y, dialog_width, dialog_height)
-        pygame.draw.rect(screen, self.WHITE, dialog_rect)
-        pygame.draw.rect(screen, self.BLACK, dialog_rect, 3)
+        pygame.draw.rect(screen, self.RGB_WHITE, dialog_rect)
+        pygame.draw.rect(screen, self.RGB_BLACK, dialog_rect, 3)
 
         # Draw title
         title_text = "Choose promotion piece:"
-        title_surface = self.font_medium.render(title_text, True, self.BLACK)
+        title_surface = self.font_medium.render(title_text, True, self.RGB_BLACK)
         title_rect = title_surface.get_rect(center=(dialog_x + dialog_width//2, dialog_y + 30))
         screen.blit(title_surface, title_rect)
 
@@ -467,7 +471,7 @@ class ChessDisplay:
 
             # Draw piece background
             pygame.draw.rect(screen, self.LIGHT_SQUARE, piece_rect)
-            pygame.draw.rect(screen, self.BLACK, piece_rect, 2)
+            pygame.draw.rect(screen, self.RGB_BLACK, piece_rect, 2)
 
             # Draw piece image or text
             key = f"{color.value}{piece_type.value}"
@@ -480,7 +484,7 @@ class ChessDisplay:
             else:
                 # Fallback to text
                 piece_text = piece_type.value
-                text_surface = self.font_large.render(piece_text, True, self.BLACK)
+                text_surface = self.font_large.render(piece_text, True, self.RGB_BLACK)
                 text_rect = text_surface.get_rect(center=piece_rect.center)
                 screen.blit(text_surface, text_rect)
 

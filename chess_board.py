@@ -126,8 +126,8 @@ class BoardState:
     
     # Game status
     is_check: bool = False
-    checkmate_flag: bool = False
-    stalemate_flag: bool = False
+    is_in_checkmate: bool = False
+    is_in_stalemate: bool = False
     game_phase: GamePhase = GamePhase.OPENING
     
     # Move history
@@ -600,10 +600,10 @@ class BoardState:
 
         # Update checkmate and stalemate status
         if self.is_check:
-            self.checkmate_flag = self.is_checkmate(self.current_turn)
+            self.is_in_checkmate =self.is_checkmate(self.current_turn)
         else:
-            self.checkmate_flag = False
-            self.stalemate_flag = self.is_stalemate(self.current_turn)
+            self.is_in_checkmate =False
+            self.is_in_stalemate =self.is_stalemate(self.current_turn)
 
         # Create and store move in history
         move = Move(
@@ -688,10 +688,10 @@ class BoardState:
 
         # Update checkmate and stalemate status
         if self.is_check:
-            self.checkmate_flag = self.is_checkmate(self.current_turn)
+            self.is_in_checkmate =self.is_checkmate(self.current_turn)
         else:
-            self.checkmate_flag = False
-            self.stalemate_flag = self.is_stalemate(self.current_turn)
+            self.is_in_checkmate =False
+            self.is_in_stalemate =self.is_stalemate(self.current_turn)
 
         # Create and store move in history
         move = Move(
@@ -785,8 +785,8 @@ class BoardState:
         self.castling_rights = previous_state.castling_rights
         self.en_passant_target = previous_state.en_passant_target
         self.is_check = previous_state.is_check
-        self.checkmate_flag = previous_state.checkmate_flag
-        self.stalemate_flag = previous_state.stalemate_flag
+        self.is_in_checkmate = previous_state.is_in_checkmate
+        self.is_in_stalemate = previous_state.is_in_stalemate
         self.game_phase = previous_state.game_phase
         self.move_history = previous_state.move_history
         self.position_history = previous_state.position_history
@@ -816,8 +816,8 @@ class BoardState:
         self.castling_rights = next_state.castling_rights
         self.en_passant_target = next_state.en_passant_target
         self.is_check = next_state.is_check
-        self.checkmate_flag = next_state.checkmate_flag
-        self.stalemate_flag = next_state.stalemate_flag
+        self.is_in_checkmate = next_state.is_in_checkmate
+        self.is_in_stalemate = next_state.is_in_stalemate
         self.game_phase = next_state.game_phase
         self.move_history = next_state.move_history
         self.position_history = next_state.position_history
