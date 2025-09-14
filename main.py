@@ -29,44 +29,58 @@ BUTTON_TEXT = (255, 255, 255)
 # Initialize mixer for sounds
 pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
 
+def play_error_beep():
+    """Play system error beep sound"""
+    import winsound
+    # Play system beep (frequency 800Hz, duration 300ms)
+    winsound.Beep(800, 300)
+
+# Check if we can create pygame sounds (requires NumPy)
 def create_error_sound():
-    """Create a simple error beep sound"""
-    import numpy as np
-    sample_rate = 22050
-    duration = 0.3  # 300ms
-    frequency = 800  # 800Hz beep
+    """Create a simple error beep sound using pygame"""
+    try:
+        import numpy as np
+        sample_rate = 22050
+        duration = 0.3  # 300ms
+        frequency = 800  # 800Hz beep
 
-    # Generate beep sound
-    frames = int(duration * sample_rate)
-    arr = np.zeros(frames)
+        # Generate beep sound
+        frames = int(duration * sample_rate)
+        arr = np.zeros(frames)
 
-    for i in range(frames):
-        # Fade in/out to avoid clicks
-        fade_frames = int(0.01 * sample_rate)  # 10ms fade
-        if i < fade_frames:
-            fade = i / fade_frames
-        elif i > frames - fade_frames:
-            fade = (frames - i) / fade_frames
-        else:
-            fade = 1.0
+        for i in range(frames):
+            # Fade in/out to avoid clicks
+            fade_frames = int(0.01 * sample_rate)  # 10ms fade
+            if i < fade_frames:
+                fade = i / fade_frames
+            elif i > frames - fade_frames:
+                fade = (frames - i) / fade_frames
+            else:
+                fade = 1.0
 
-        arr[i] = fade * np.sin(2 * np.pi * frequency * i / sample_rate)
+            arr[i] = fade * np.sin(2 * np.pi * frequency * i / sample_rate)
 
-    # Convert to 16-bit integers
-    arr = (arr * 32767).astype(np.int16)
+        # Convert to 16-bit integers
+        arr = (arr * 32767).astype(np.int16)
 
-    # Create stereo array
-    stereo_arr = np.zeros((frames, 2), dtype=np.int16)
-    stereo_arr[:, 0] = arr
-    stereo_arr[:, 1] = arr
+        # Create stereo array
+        stereo_arr = np.zeros((frames, 2), dtype=np.int16)
+        stereo_arr[:, 0] = arr
+        stereo_arr[:, 1] = arr
 
-    return pygame.sndarray.make_sound(stereo_arr)
+        return pygame.sndarray.make_sound(stereo_arr)
+    except ImportError:
+        return None
 
-# Create error sound once
+# Try to create pygame sound, fallback to system beep
 try:
     error_sound = create_error_sound()
-except ImportError:
-    print("NumPy not available, using system beep")
+    if error_sound:
+        print("Pygame error sound created successfully")
+    else:
+        print("Using system beep for error sound")
+except Exception as e:
+    print(f"Could not create pygame sound, using system beep: {e}")
     error_sound = None
 
 # Create global chess board in starting position
@@ -117,10 +131,14 @@ while running:
                         print("Undo failed")
                         if error_sound:
                             error_sound.play()
+                        else:
+                            play_error_beep()
                 else:
                     print("Nothing to undo")
                     if error_sound:
                         error_sound.play()
+                    else:
+                        play_error_beep()
             elif event.key == pygame.K_r:  # R key to redo
                 if chess_board.can_redo():
                     success = chess_board.redo_move()
@@ -133,10 +151,14 @@ while running:
                         print("Redo failed")
                         if error_sound:
                             error_sound.play()
+                        else:
+                            play_error_beep()
                 else:
                     print("Nothing to redo")
                     if error_sound:
                         error_sound.play()
+                    else:
+                        play_error_beep()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             
