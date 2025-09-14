@@ -519,9 +519,56 @@ class BoardState:
             if self._is_square_empty_or_enemy(new_row, new_col, color):
                 moves.append((new_row, new_col))
 
-        # TODO: Add castling logic here
+        # Add castling moves
+        if self.can_castle(color, True):  # Kingside
+            moves.append((row, 6))  # King moves to g-file
+        if self.can_castle(color, False):  # Queenside
+            moves.append((row, 2))  # King moves to c-file
 
         return moves
+
+    def _is_castling_move(self, from_row: int, from_col: int, to_row: int, to_col: int) -> bool:
+        """Check if a move is a castling move"""
+        piece = self.get_piece(from_row, from_col)
+        if not piece or piece.type != PieceType.KING:
+            return False
+
+        # King must move exactly 2 squares horizontally
+        if from_row != to_row or abs(to_col - from_col) != 2:
+            return False
+
+        return True
+
+    def _execute_castling(self, from_row: int, from_col: int, to_row: int, to_col: int) -> None:
+        """Execute castling by moving both king and rook"""
+        # Determine if kingside or queenside
+        is_kingside = to_col > from_col
+
+        # Move the king
+        king = self.get_piece(from_row, from_col)
+        self.set_piece(to_row, to_col, king)
+        self.set_piece(from_row, from_col, None)
+
+        # Move the rook
+        if is_kingside:
+            # Kingside castling: rook moves from h-file to f-file
+            rook = self.get_piece(from_row, 7)
+            self.set_piece(from_row, 5, rook)
+            self.set_piece(from_row, 7, None)
+            if rook:
+                rook.has_moved = True
+        else:
+            # Queenside castling: rook moves from a-file to d-file
+            rook = self.get_piece(from_row, 0)
+            self.set_piece(from_row, 3, rook)
+            self.set_piece(from_row, 0, None)
+            if rook:
+                rook.has_moved = True
+
+        # Mark king as moved and update castling rights
+        if king:
+            king.has_moved = True
+            self.castling_rights.lose_all_castling_rights(king.color)
 
     def _save_state_for_undo(self) -> None:
         """Save current board state to undo stack and clear redo stack"""
@@ -560,12 +607,35 @@ class BoardState:
         # Store captured piece for move history
         captured_piece = self.get_piece(to_row, to_col)
 
-        # Execute the move
-        self.set_piece(to_row, to_col, piece)
-        self.set_piece(from_row, from_col, None)
+        # Check if this is a castling move
+        if self._is_castling_move(from_row, from_col, to_row, to_col):
+            # Execute castling (moves both king and rook)
+            self._execute_castling(from_row, from_col, to_row, to_col)
+        else:
+            # Execute regular move
+            self.set_piece(to_row, to_col, piece)
+            self.set_piece(from_row, from_col, None)
 
-        # Mark piece as moved (important for castling and pawn double moves)
-        piece.has_moved = True
+            # Mark piece as moved (important for castling and pawn double moves)
+            piece.has_moved = True
+
+            # Update castling rights based on piece moves
+            if piece.type == PieceType.KING:
+                # King moved - lose all castling rights for this color
+                self.castling_rights.lose_all_castling_rights(piece.color)
+            elif piece.type == PieceType.ROOK:
+                # Rook moved - lose castling rights for the specific side
+                if from_col == 0:  # Queenside rook
+                    self.castling_rights.lose_castling_right(piece.color, False)
+                elif from_col == 7:  # Kingside rook
+                    self.castling_rights.lose_castling_right(piece.color, True)
+
+            # Also check if a rook was captured that would affect castling rights
+            if captured_piece and captured_piece.type == PieceType.ROOK:
+                if to_col == 0:  # Queenside rook captured
+                    self.castling_rights.lose_castling_right(captured_piece.color, False)
+                elif to_col == 7:  # Kingside rook captured
+                    self.castling_rights.lose_castling_right(captured_piece.color, True)
 
         # Handle special pawn moves
         if piece.type == PieceType.PAWN:

@@ -65,29 +65,23 @@ while is_running:
                 if board_state.can_undo():
                     success = board_state.undo_move()
                     if success:
-                        print("Move undone")
                         # Clear any current selection
                         selected_square_coords = None
                         highlighted_moves = []
                     else:
-                        print("Undo failed")
                         sound_manager.play_error_sound()
                 else:
-                    print("Nothing to undo")
                     sound_manager.play_error_sound()
             elif event.key == pygame.K_r:  # R key to redo
                 if board_state.can_redo():
                     success = board_state.redo_move()
                     if success:
-                        print("Move redone")
                         # Clear any current selection
                         selected_square_coords = None
                         highlighted_moves = []
                     else:
-                        print("Redo failed")
                         sound_manager.play_error_sound()
                 else:
-                    print("Nothing to redo")
                     sound_manager.play_error_sound()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
@@ -124,9 +118,7 @@ while is_running:
                                     selected_square_coords[0], selected_square_coords[1],
                                     square[0], square[1], promotion_piece
                                 )
-                                if move_successful:
-                                    print(f"Promotion move from {selected_square_coords} to {square}, promoted to {promotion_piece.value}")
-                                else:
+                                if not move_successful:
                                     print("Promotion move failed!")
                             else:
                                 # Execute regular move
@@ -134,9 +126,7 @@ while is_running:
                                     selected_square_coords[0], selected_square_coords[1],
                                     square[0], square[1]
                                 )
-                                if move_successful:
-                                    print(f"Move from {selected_square_coords} to {square}")
-                                else:
+                                if not move_successful:
                                     print("Move failed!")  # This shouldn't happen if move validation works
 
                             # Clear selection regardless
