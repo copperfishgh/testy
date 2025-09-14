@@ -188,13 +188,63 @@ class BoardState:
         return None
     
     def is_square_attacked(self, row: int, col: int, by_color: Color) -> bool:
-        """
-        Check if a square is attacked by pieces of a specific color.
-        This is a simplified version - in a full implementation, you'd check
-        all piece movement patterns.
-        """
-        # This is a placeholder - full implementation would check all piece types
-        # For now, just return False to avoid infinite complexity
+        """Check if a square is attacked by pieces of a specific color."""
+        # Check for pawn attacks
+        pawn_direction = 1 if by_color == Color.WHITE else -1
+        for dc in [-1, 1]:
+            attack_row = row - pawn_direction
+            attack_col = col + dc
+            if self._is_valid_square(attack_row, attack_col):
+                piece = self.get_piece(attack_row, attack_col)
+                if piece and piece.type == PieceType.PAWN and piece.color == by_color:
+                    return True
+
+        # Check for king attacks
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                if dr == 0 and dc == 0:
+                    continue
+                attack_row, attack_col = row + dr, col + dc
+                if self._is_valid_square(attack_row, attack_col):
+                    piece = self.get_piece(attack_row, attack_col)
+                    if piece and piece.type == PieceType.KING and piece.color == by_color:
+                        return True
+
+        # Check for knight attacks
+        knight_moves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+        for dr, dc in knight_moves:
+            attack_row, attack_col = row + dr, col + dc
+            if self._is_valid_square(attack_row, attack_col):
+                piece = self.get_piece(attack_row, attack_col)
+                if piece and piece.type == PieceType.KNIGHT and piece.color == by_color:
+                    return True
+
+        # Check for rook/queen attacks (horizontal and vertical)
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        for dr, dc in directions:
+            for i in range(1, 8):
+                attack_row, attack_col = row + i * dr, col + i * dc
+                if not self._is_valid_square(attack_row, attack_col):
+                    break
+                piece = self.get_piece(attack_row, attack_col)
+                if piece:
+                    if piece.color == by_color and (piece.type == PieceType.ROOK or piece.type == PieceType.QUEEN):
+                        return True
+                    break  # Piece blocks further attacks in this direction
+
+        # Check for bishop/queen attacks (diagonal)
+        directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        for dr, dc in directions:
+            for i in range(1, 8):
+                attack_row, attack_col = row + i * dr, col + i * dc
+                if not self._is_valid_square(attack_row, attack_col):
+                    break
+                piece = self.get_piece(attack_row, attack_col)
+                if piece:
+                    if piece.color == by_color and (piece.type == PieceType.BISHOP or piece.type == PieceType.QUEEN):
+                        return True
+                    break  # Piece blocks further attacks in this direction
+
         return False
     
     def is_king_in_check(self, color: Color) -> bool:
@@ -303,25 +353,53 @@ class BoardState:
         return result
 
     def get_possible_moves(self, row: int, col: int) -> List[Tuple[int, int]]:
-        """Get all possible moves for a piece at the given position"""
+        """Get all legal moves for a piece at the given position (filters out moves that leave king in check)"""
         piece = self.get_piece(row, col)
         if not piece:
             return []
 
+        # Get all pseudo-legal moves first
         if piece.type == PieceType.PAWN:
-            return self._get_pawn_moves(row, col, piece.color)
+            pseudo_moves = self._get_pawn_moves(row, col, piece.color)
         elif piece.type == PieceType.ROOK:
-            return self._get_rook_moves(row, col, piece.color)
+            pseudo_moves = self._get_rook_moves(row, col, piece.color)
         elif piece.type == PieceType.KNIGHT:
-            return self._get_knight_moves(row, col, piece.color)
+            pseudo_moves = self._get_knight_moves(row, col, piece.color)
         elif piece.type == PieceType.BISHOP:
-            return self._get_bishop_moves(row, col, piece.color)
+            pseudo_moves = self._get_bishop_moves(row, col, piece.color)
         elif piece.type == PieceType.QUEEN:
-            return self._get_queen_moves(row, col, piece.color)
+            pseudo_moves = self._get_queen_moves(row, col, piece.color)
         elif piece.type == PieceType.KING:
-            return self._get_king_moves(row, col, piece.color)
+            pseudo_moves = self._get_king_moves(row, col, piece.color)
+        else:
+            return []
 
-        return []
+        # Filter out moves that would leave the king in check
+        legal_moves = []
+        for move_row, move_col in pseudo_moves:
+            if self._is_move_legal(row, col, move_row, move_col):
+                legal_moves.append((move_row, move_col))
+
+        return legal_moves
+
+    def _is_move_legal(self, from_row: int, from_col: int, to_row: int, to_col: int) -> bool:
+        """Check if a move is legal (doesn't leave own king in check)"""
+        # Save current state
+        piece = self.get_piece(from_row, from_col)
+        captured_piece = self.get_piece(to_row, to_col)
+
+        # Make temporary move
+        self.set_piece(to_row, to_col, piece)
+        self.set_piece(from_row, from_col, None)
+
+        # Check if our king is in check after this move
+        is_legal = not self.is_king_in_check(piece.color)
+
+        # Restore original state
+        self.set_piece(from_row, from_col, piece)
+        self.set_piece(to_row, to_col, captured_piece)
+
+        return is_legal
 
     def _is_valid_square(self, row: int, col: int) -> bool:
         """Check if a square is within board bounds"""
@@ -495,6 +573,9 @@ class BoardState:
         if self.current_turn == Color.WHITE:
             self.fullmove_number += 1
 
+        # Update check status for the new player to move
+        self.is_check = self.is_king_in_check(self.current_turn)
+
         # Create and store move in history
         move = Move(
             from_square=(from_row, from_col),
@@ -569,6 +650,9 @@ class BoardState:
 
         if self.current_turn == Color.WHITE:
             self.fullmove_number += 1
+
+        # Update check status for the new player to move
+        self.is_check = self.is_king_in_check(self.current_turn)
 
         # Create and store move in history
         move = Move(
