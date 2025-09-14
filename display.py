@@ -47,6 +47,10 @@ class ChessDisplay:
 
         # Create move indicator circle surface once
         self.move_indicator = self._create_move_indicator()
+
+        # Checkmate animation variables
+        self.checkmate_animation_start_time = None
+        self.checkmate_king_position = None
     
     def _load_piece_images(self) -> dict:
         """Load and scale piece images from PNG files"""
@@ -110,6 +114,50 @@ class ChessDisplay:
         """Draw the pre-created move indicator at specified position"""
         screen.blit(self.move_indicator, (x, y))
 
+    def start_checkmate_animation(self, board_state: BoardState) -> None:
+        """Start the checkmate animation for the losing king"""
+        import time
+        self.checkmate_animation_start_time = time.time()
+
+        # Find the checkmated king position
+        losing_color = board_state.current_turn
+        self.checkmate_king_position = board_state.get_king_position(losing_color)
+
+    def draw_rotating_king(self, screen, piece: Piece, x: int, y: int, elapsed_time: float) -> None:
+        """Draw a king rotating on its head"""
+        # Animation duration is 0.5 seconds for 360 degree rotation
+        animation_duration = 0.5
+
+        if elapsed_time > animation_duration:
+            # Animation finished, draw normally but upside down
+            angle = 180
+        else:
+            # Calculate rotation angle (0 to 180 degrees over 0.5 seconds)
+            progress = elapsed_time / animation_duration
+            angle = progress * 180
+
+        # Get the original piece image
+        key = f"{piece.color.value}{piece.type.value}"
+        if key in self.piece_images:
+            original_surface = self.piece_images[key]
+
+            # Rotate the image
+            rotated_surface = pygame.transform.rotate(original_surface, angle)
+
+            # Center the rotated image in the square
+            rotated_rect = rotated_surface.get_rect()
+            center_x = x + self.square_size // 2
+            center_y = y + self.square_size // 2
+            rotated_rect.center = (center_x, center_y)
+
+            screen.blit(rotated_surface, rotated_rect)
+        else:
+            # Fallback to text
+            piece_text = str(piece)
+            text_surface = self.font_large.render(piece_text, True, self.BLACK)
+            text_rect = text_surface.get_rect(center=(x + self.square_size//2, y + self.square_size//2))
+            screen.blit(text_surface, text_rect)
+
     def draw_board(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
                    possible_moves: List[Tuple[int, int]] = None, flipped: bool = False) -> None:
         """Draw the chess board with pieces"""
@@ -140,7 +188,7 @@ class ChessDisplay:
                 # Draw piece if present
                 piece = board_state.get_piece(row, col)
                 if piece:
-                    self.draw_piece(screen, piece, x, y)
+                    self.draw_piece(screen, piece, x, y, row, col)
 
                 # Draw move indicator circle for possible moves
                 if (row, col) in possible_moves:
@@ -155,9 +203,20 @@ class ChessDisplay:
         # Draw coordinates
         self.draw_coordinates(screen, flipped)
     
-    def draw_piece(self, screen, piece: Piece, x: int, y: int) -> None:
+    def draw_piece(self, screen, piece: Piece, x: int, y: int, board_row: int = -1, board_col: int = -1) -> None:
         """Draw a piece at the specified screen coordinates"""
-        # Get piece image
+        # Check if this is the checkmated king and animation is active
+        if (self.checkmate_animation_start_time is not None and
+            self.checkmate_king_position is not None and
+            piece.type == PieceType.KING and
+            (board_row, board_col) == self.checkmate_king_position):
+
+            import time
+            elapsed_time = time.time() - self.checkmate_animation_start_time
+            self.draw_rotating_king(screen, piece, x, y, elapsed_time)
+            return
+
+        # Normal piece drawing
         key = f"{piece.color.value}{piece.type.value}"
         if key in self.piece_images:
             piece_surface = self.piece_images[key]
@@ -246,10 +305,10 @@ class ChessDisplay:
         
         # Game status
         status_y = castling_y + 120
-        if board_state.is_checkmate:
+        if board_state.checkmate_flag:
             status_text = "CHECKMATE!"
             status_color = (255, 0, 0)  # Red
-        elif board_state.is_stalemate:
+        elif board_state.stalemate_flag:
             status_text = "STALEMATE"
             status_color = (255, 165, 0)  # Orange
         elif board_state.is_check:
@@ -303,6 +362,10 @@ class ChessDisplay:
     def update_display(self, screen, board_state: BoardState, selected_square: Optional[Tuple[int, int]] = None,
                       possible_moves: List[Tuple[int, int]] = None, flipped: bool = False) -> None:
         """Update the entire display"""
+        # Check for checkmate and start animation if needed
+        if board_state.checkmate_flag and self.checkmate_animation_start_time is None:
+            self.start_checkmate_animation(board_state)
+
         # Clear screen
         screen.fill(self.WHITE)
 

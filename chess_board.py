@@ -126,8 +126,8 @@ class BoardState:
     
     # Game status
     is_check: bool = False
-    is_checkmate: bool = False
-    is_stalemate: bool = False
+    checkmate_flag: bool = False
+    stalemate_flag: bool = False
     game_phase: GamePhase = GamePhase.OPENING
     
     # Move history
@@ -576,6 +576,13 @@ class BoardState:
         # Update check status for the new player to move
         self.is_check = self.is_king_in_check(self.current_turn)
 
+        # Update checkmate and stalemate status
+        if self.is_check:
+            self.checkmate_flag = self.is_checkmate(self.current_turn)
+        else:
+            self.checkmate_flag = False
+            self.stalemate_flag = self.is_stalemate(self.current_turn)
+
         # Create and store move in history
         move = Move(
             from_square=(from_row, from_col),
@@ -654,6 +661,13 @@ class BoardState:
         # Update check status for the new player to move
         self.is_check = self.is_king_in_check(self.current_turn)
 
+        # Update checkmate and stalemate status
+        if self.is_check:
+            self.checkmate_flag = self.is_checkmate(self.current_turn)
+        else:
+            self.checkmate_flag = False
+            self.stalemate_flag = self.is_stalemate(self.current_turn)
+
         # Create and store move in history
         move = Move(
             from_square=(from_row, from_col),
@@ -680,6 +694,40 @@ class BoardState:
             return True
 
         return False
+
+    def is_checkmate(self, color: Color) -> bool:
+        """Check if the specified color is in checkmate"""
+        # Must be in check first
+        if not self.is_king_in_check(color):
+            return False
+
+        # Check if any piece of this color has legal moves
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece(row, col)
+                if piece and piece.color == color:
+                    legal_moves = self.get_possible_moves(row, col)
+                    if legal_moves:  # If any piece has legal moves, not checkmate
+                        return False
+
+        return True
+
+    def is_stalemate(self, color: Color) -> bool:
+        """Check if the specified color is in stalemate (no legal moves but not in check)"""
+        # Must NOT be in check
+        if self.is_king_in_check(color):
+            return False
+
+        # Check if any piece of this color has legal moves
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece(row, col)
+                if piece and piece.color == color:
+                    legal_moves = self.get_possible_moves(row, col)
+                    if legal_moves:  # If any piece has legal moves, not stalemate
+                        return False
+
+        return True
 
 # Example usage and testing
 if __name__ == "__main__":
