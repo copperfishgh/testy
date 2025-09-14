@@ -2,86 +2,28 @@ import pygame
 import sys
 from chess_board import BoardState
 from display import ChessDisplay
+from config import GameConfig, Colors
+from sound_manager import get_sound_manager
 
 # Initialize Pygame
 pygame.init()
 
-# Get screen dimensions
+# Get screen dimensions and calculate window size
 screen_info = pygame.display.Info()
 SCREEN_WIDTH = screen_info.current_w
 SCREEN_HEIGHT = screen_info.current_h
 
-# Calculate window size as percentage of screen (75%)
-WINDOW_WIDTH = int(min(SCREEN_WIDTH * 0.75, SCREEN_HEIGHT * 0.75))  # 75% of smaller dimension
-WINDOW_HEIGHT = int(WINDOW_WIDTH * 1.1)  # Slightly taller for button
+# Calculate window size using config values
+WINDOW_WIDTH = int(min(SCREEN_WIDTH * GameConfig.SCREEN_SIZE_PERCENTAGE,
+                      SCREEN_HEIGHT * GameConfig.SCREEN_SIZE_PERCENTAGE))
+WINDOW_HEIGHT = int(WINDOW_WIDTH * GameConfig.WINDOW_ASPECT_RATIO)
 
 # Create display
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Chess Game")
 
-# Colors (RGB)
-RGB_WHITE = (255, 255, 255)
-RGB_BLACK = (0, 0, 0)
-BUTTON_BACKGROUND_COLOR = (100, 100, 100)
-BUTTON_HOVER_COLOR = (150, 150, 150)
-BUTTON_TEXT_COLOR = (255, 255, 255)
-
-# Initialize mixer for sounds
-pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-
-def play_error_beep():
-    """Play system error beep sound"""
-    import winsound
-    # Play system beep (frequency 800Hz, duration 300ms)
-    winsound.Beep(800, 300)
-
-# Check if we can create pygame sounds (requires NumPy)
-def create_error_sound():
-    """Create a simple error beep sound using pygame"""
-    try:
-        import numpy as np
-        sample_rate = 22050
-        duration = 0.3  # 300ms
-        frequency = 800  # 800Hz beep
-
-        # Generate beep sound
-        frames = int(duration * sample_rate)
-        arr = np.zeros(frames)
-
-        for i in range(frames):
-            # Fade in/out to avoid clicks
-            fade_frames = int(0.01 * sample_rate)  # 10ms fade
-            if i < fade_frames:
-                fade = i / fade_frames
-            elif i > frames - fade_frames:
-                fade = (frames - i) / fade_frames
-            else:
-                fade = 1.0
-
-            arr[i] = fade * np.sin(2 * np.pi * frequency * i / sample_rate)
-
-        # Convert to 16-bit integers
-        arr = (arr * 32767).astype(np.int16)
-
-        # Create stereo array
-        stereo_arr = np.zeros((frames, 2), dtype=np.int16)
-        stereo_arr[:, 0] = arr
-        stereo_arr[:, 1] = arr
-
-        return pygame.sndarray.make_sound(stereo_arr)
-    except ImportError:
-        return None
-
-# Try to create pygame sound, fallback to system beep
-try:
-    error_sound = create_error_sound()
-    if error_sound:
-        print("Pygame error sound created successfully")
-    else:
-        print("Using system beep for error sound")
-except Exception as e:
-    print(f"Could not create pygame sound, using system beep: {e}")
-    error_sound = None
+# Initialize sound system
+sound_manager = get_sound_manager()
 
 # Create global board state in starting position
 board_state = BoardState()
@@ -89,15 +31,15 @@ board_state = BoardState()
 # Create display object
 display = ChessDisplay(WINDOW_WIDTH, WINDOW_HEIGHT)
 
-# Button properties (percentage-based)
-button_width = int(WINDOW_WIDTH * 0.35)  # 35% of window width
-button_height = int(WINDOW_HEIGHT * 0.08)  # 8% of window height
+# Button properties using config values
+button_width = int(WINDOW_WIDTH * GameConfig.BUTTON_WIDTH_PERCENTAGE)
+button_height = int(WINDOW_HEIGHT * GameConfig.BUTTON_HEIGHT_PERCENTAGE)
 button_x = (WINDOW_WIDTH - button_width) // 2  # Centered horizontally
-button_y = int(WINDOW_HEIGHT * 0.9)  # 90% down from top
+button_y = int(WINDOW_HEIGHT * GameConfig.BUTTON_Y_PERCENTAGE)
 flip_button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
 
-# Font setup (percentage-based)
-font_size = int(WINDOW_WIDTH * 0.05)  # 5% of window width
+# Font setup using config values
+font_size = int(WINDOW_WIDTH * GameConfig.FONT_BUTTON_PERCENTAGE)
 font = pygame.font.Font(None, font_size)
 
 # Game state
@@ -129,16 +71,10 @@ while is_running:
                         highlighted_moves = []
                     else:
                         print("Undo failed")
-                        if error_sound:
-                            error_sound.play()
-                        else:
-                            play_error_beep()
+                        sound_manager.play_error_sound()
                 else:
                     print("Nothing to undo")
-                    if error_sound:
-                        error_sound.play()
-                    else:
-                        play_error_beep()
+                    sound_manager.play_error_sound()
             elif event.key == pygame.K_r:  # R key to redo
                 if board_state.can_redo():
                     success = board_state.redo_move()
@@ -149,16 +85,10 @@ while is_running:
                         highlighted_moves = []
                     else:
                         print("Redo failed")
-                        if error_sound:
-                            error_sound.play()
-                        else:
-                            play_error_beep()
+                        sound_manager.play_error_sound()
                 else:
                     print("Nothing to redo")
-                    if error_sound:
-                        error_sound.play()
-                    else:
-                        play_error_beep()
+                    sound_manager.play_error_sound()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             
@@ -227,13 +157,13 @@ while is_running:
     display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped)
     
     # Draw flip button
-    button_color = BUTTON_HOVER_COLOR if flip_button_rect.collidepoint(pygame.mouse.get_pos()) else BUTTON_BACKGROUND_COLOR
+    button_color = Colors.BUTTON_HOVER_COLOR if flip_button_rect.collidepoint(pygame.mouse.get_pos()) else Colors.BUTTON_BACKGROUND_COLOR
     pygame.draw.rect(screen, button_color, flip_button_rect)
-    pygame.draw.rect(screen, RGB_BLACK, flip_button_rect, 2)  # Border
+    pygame.draw.rect(screen, Colors.RGB_BLACK, flip_button_rect, 2)  # Border
     
     # Draw button text
     button_text = "Flip Board" if not is_board_flipped else "Unflip Board"
-    text_surface = font.render(button_text, True, BUTTON_TEXT_COLOR)
+    text_surface = font.render(button_text, True, Colors.BUTTON_TEXT_COLOR)
     text_rect = text_surface.get_rect(center=flip_button_rect.center)
     screen.blit(text_surface, text_rect)
     

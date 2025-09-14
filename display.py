@@ -8,6 +8,7 @@ It provides functionality to display the board, pieces, and game information.
 from typing import Optional, Tuple, List
 import pygame
 from chess_board import BoardState, Piece, Color, PieceType
+from config import GameConfig, Colors, AnimationConfig, GameConstants
 
 class ChessDisplay:
     """Handles the visual display of the chess game"""
@@ -17,30 +18,30 @@ class ChessDisplay:
         self.window_width = window_width
         self.window_height = window_height
         
-        # Colors
-        self.RGB_WHITE = (255, 255, 255)
-        self.RGB_BLACK = (0, 0, 0)
-        self.LIGHT_SQUARE = (240, 217, 181)  # Light brown
-        self.DARK_SQUARE = (181, 136, 99)    # Dark brown
-        self.HIGHLIGHT = (255, 255, 0)       # Yellow for highlights
-        self.SELECTED = (255, 0, 0)          # Red for selected square
+        # Colors from config
+        self.RGB_WHITE = Colors.RGB_WHITE
+        self.RGB_BLACK = Colors.RGB_BLACK
+        self.LIGHT_SQUARE = Colors.LIGHT_SQUARE
+        self.DARK_SQUARE = Colors.DARK_SQUARE
+        self.HIGHLIGHT = Colors.HIGHLIGHT
+        self.SELECTED = Colors.SELECTED
         
-        # Board dimensions (percentage-based)
-        self.board_size = int(min(window_width, window_height * 0.9) * 0.85)  # 85% of smaller dimension, with 10% space for button
-        self.square_size = self.board_size // 8
-        
-        # Position board with percentage-based margins
-        self.board_margin_x = int(window_width * 0.07)  # 7% margin from left
-        self.board_margin_y = int(window_height * 0.07)  # 7% margin from top
+        # Board dimensions using config values
+        self.board_size = int(min(window_width, window_height * 0.9) * GameConfig.BOARD_SIZE_PERCENTAGE)
+        self.square_size = self.board_size // GameConstants.BOARD_SIZE
+
+        # Position board with config-based margins
+        self.board_margin_x = int(window_width * GameConfig.BOARD_MARGIN_PERCENTAGE)
+        self.board_margin_y = int(window_height * GameConfig.BOARD_MARGIN_PERCENTAGE)
         
         # Ensure pygame is initialized before creating fonts
         if not pygame.get_init():
             pygame.init()
         
-        # Font setup (percentage-based)
-        self.font_large = pygame.font.Font(None, int(self.board_size * 0.09))   # 9% of board size
-        self.font_medium = pygame.font.Font(None, int(self.board_size * 0.06))  # 6% of board size
-        self.font_small = pygame.font.Font(None, int(self.board_size * 0.045))  # 4.5% of board size
+        # Font setup using config values
+        self.font_large = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_LARGE_PERCENTAGE))
+        self.font_medium = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_MEDIUM_PERCENTAGE))
+        self.font_small = pygame.font.Font(None, int(self.board_size * GameConfig.FONT_SMALL_PERCENTAGE))
         
         # Load piece images (placeholder - you'd load actual piece images here)
         self.piece_images = self._load_piece_images()
