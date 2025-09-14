@@ -371,9 +371,62 @@ class ChessDisplay:
 
         # Draw all components
         self.draw_board(screen, board_state, selected_square, possible_moves, flipped)
-        
+
+        # Draw stalemate overlay if needed
+        if board_state.stalemate_flag:
+            self.draw_stalemate_overlay(screen)
+
         # Note: pygame.display.flip() is called in the main loop, not here
-    
+
+    def draw_stalemate_overlay(self, screen) -> None:
+        """Draw a semi-transparent stalemate message overlay with rubber stamp effect"""
+        # Create semi-transparent overlay
+        overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 100))  # Semi-transparent black
+        screen.blit(overlay, (0, 0))
+
+        # Calculate board width for text sizing
+        board_width = self.square_size * 8
+
+        # Create a large font to make text span the board width
+        font_size = int(board_width * 0.2)  # 20% of board width for bigger text
+        stamp_font = pygame.font.Font(None, font_size)
+
+        # Draw stalemate message in bright red
+        stalemate_text = "STALEMATE"
+        text_surface = stamp_font.render(stalemate_text, True, (255, 0, 0))  # Bright red text
+
+        # Scale text to exactly match board width
+        text_width = text_surface.get_width()
+        scale_factor = board_width / text_width
+        new_width = int(text_width * scale_factor)
+        new_height = int(text_surface.get_height() * scale_factor)
+        text_surface = pygame.transform.smoothscale(text_surface, (new_width, new_height))
+
+        # Rotate the text 30 degrees for rubber stamp effect
+        rotated_surface = pygame.transform.rotate(text_surface, 30)
+
+        # Create black outline for the rotated text
+        outline_surface = stamp_font.render(stalemate_text, True, (0, 0, 0))
+        outline_surface = pygame.transform.smoothscale(outline_surface, (new_width, new_height))
+        rotated_outline = pygame.transform.rotate(outline_surface, 30)
+
+        # Center the rotated text on the board (not the whole window)
+        board_center_x = self.board_offset_x + (self.square_size * 8) // 2
+        board_center_y = self.board_offset_y + (self.square_size * 8) // 2
+
+        rotated_rect = rotated_surface.get_rect(center=(board_center_x, board_center_y))
+        outline_rect = rotated_outline.get_rect(center=(board_center_x, board_center_y))
+
+        # Draw thick black outline for better visibility
+        for dx in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+            for dy in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+                if dx != 0 or dy != 0:
+                    screen.blit(rotated_outline, (outline_rect.x + dx, outline_rect.y + dy))
+
+        # Draw main red text
+        screen.blit(rotated_surface, rotated_rect)
+
     def show_promotion_dialog(self, screen, color: Color) -> PieceType:
         """Show promotion dialog and return selected piece type"""
         # Define promotion pieces (Queen, Rook, Bishop, Knight)
