@@ -26,6 +26,49 @@ BUTTON_COLOR = (100, 100, 100)
 BUTTON_HOVER = (150, 150, 150)
 BUTTON_TEXT = (255, 255, 255)
 
+# Initialize mixer for sounds
+pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
+
+def create_error_sound():
+    """Create a simple error beep sound"""
+    import numpy as np
+    sample_rate = 22050
+    duration = 0.3  # 300ms
+    frequency = 800  # 800Hz beep
+
+    # Generate beep sound
+    frames = int(duration * sample_rate)
+    arr = np.zeros(frames)
+
+    for i in range(frames):
+        # Fade in/out to avoid clicks
+        fade_frames = int(0.01 * sample_rate)  # 10ms fade
+        if i < fade_frames:
+            fade = i / fade_frames
+        elif i > frames - fade_frames:
+            fade = (frames - i) / fade_frames
+        else:
+            fade = 1.0
+
+        arr[i] = fade * np.sin(2 * np.pi * frequency * i / sample_rate)
+
+    # Convert to 16-bit integers
+    arr = (arr * 32767).astype(np.int16)
+
+    # Create stereo array
+    stereo_arr = np.zeros((frames, 2), dtype=np.int16)
+    stereo_arr[:, 0] = arr
+    stereo_arr[:, 1] = arr
+
+    return pygame.sndarray.make_sound(stereo_arr)
+
+# Create error sound once
+try:
+    error_sound = create_error_sound()
+except ImportError:
+    print("NumPy not available, using system beep")
+    error_sound = None
+
 # Create global chess board in starting position
 chess_board = BoardState()
 
@@ -62,6 +105,38 @@ while running:
                 running = False
             elif event.key == pygame.K_f:  # F key to flip board
                 board_flipped = not board_flipped
+            elif event.key == pygame.K_u:  # U key to undo
+                if chess_board.can_undo():
+                    success = chess_board.undo_move()
+                    if success:
+                        print("Move undone")
+                        # Clear any current selection
+                        selected_square = None
+                        possible_moves = []
+                    else:
+                        print("Undo failed")
+                        if error_sound:
+                            error_sound.play()
+                else:
+                    print("Nothing to undo")
+                    if error_sound:
+                        error_sound.play()
+            elif event.key == pygame.K_r:  # R key to redo
+                if chess_board.can_redo():
+                    success = chess_board.redo_move()
+                    if success:
+                        print("Move redone")
+                        # Clear any current selection
+                        selected_square = None
+                        possible_moves = []
+                    else:
+                        print("Redo failed")
+                        if error_sound:
+                            error_sound.play()
+                else:
+                    print("Nothing to redo")
+                    if error_sound:
+                        error_sound.play()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             

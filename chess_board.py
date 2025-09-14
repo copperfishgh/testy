@@ -135,6 +135,10 @@ class BoardState:
     
     # Position repetition tracking (for threefold repetition rule)
     position_history: List[str] = field(default_factory=list)
+
+    # Undo/Redo functionality
+    undo_stack: List['BoardState'] = field(default_factory=list)
+    redo_stack: List['BoardState'] = field(default_factory=list)
     
     def __post_init__(self):
         """Initialize the board with starting position"""
@@ -519,6 +523,21 @@ class BoardState:
 
         return moves
 
+    def _save_state_for_undo(self) -> None:
+        """Save current board state to undo stack and clear redo stack"""
+        # Create a deep copy of the current state for undo
+        state_copy = self.copy()
+        state_copy.undo_stack = []  # Don't copy the undo/redo stacks
+        state_copy.redo_stack = []
+
+        # Add to undo stack (limit to 50 moves to prevent memory issues)
+        self.undo_stack.append(state_copy)
+        if len(self.undo_stack) > 50:
+            self.undo_stack.pop(0)
+
+        # Clear redo stack since we're making a new move
+        self.redo_stack.clear()
+
     def make_move(self, from_row: int, from_col: int, to_row: int, to_col: int) -> bool:
         """Execute a move if it's legal. Returns True if move was successful."""
         # Validate the move is in the list of possible moves
@@ -534,6 +553,9 @@ class BoardState:
         # Verify it's the correct player's turn
         if piece.color != self.current_turn:
             return False
+
+        # Save state for undo before making the move
+        self._save_state_for_undo()
 
         # Store captured piece for move history
         captured_piece = self.get_piece(to_row, to_col)
@@ -611,6 +633,9 @@ class BoardState:
         # Verify it's the correct player's turn
         if piece.color != self.current_turn:
             return False
+
+        # Save state for undo before making the move
+        self._save_state_for_undo()
 
         # Store captured piece for move history
         captured_piece = self.get_piece(to_row, to_col)
@@ -726,6 +751,76 @@ class BoardState:
                     legal_moves = self.get_possible_moves(row, col)
                     if legal_moves:  # If any piece has legal moves, not stalemate
                         return False
+
+        return True
+
+    def can_undo(self) -> bool:
+        """Check if undo is possible"""
+        return len(self.undo_stack) > 0
+
+    def can_redo(self) -> bool:
+        """Check if redo is possible"""
+        return len(self.redo_stack) > 0
+
+    def undo_move(self) -> bool:
+        """Undo the last move. Returns True if successful."""
+        if not self.can_undo():
+            return False
+
+        # Save current state to redo stack
+        current_state = self.copy()
+        current_state.undo_stack = []
+        current_state.redo_stack = []
+        self.redo_stack.append(current_state)
+
+        # Restore previous state from undo stack
+        previous_state = self.undo_stack.pop()
+
+        # Copy all fields from previous state (except undo/redo stacks)
+        self.board = previous_state.board
+        self.current_turn = previous_state.current_turn
+        self.move_number = previous_state.move_number
+        self.halfmove_clock = previous_state.halfmove_clock
+        self.fullmove_number = previous_state.fullmove_number
+        self.castling_rights = previous_state.castling_rights
+        self.en_passant_target = previous_state.en_passant_target
+        self.is_check = previous_state.is_check
+        self.checkmate_flag = previous_state.checkmate_flag
+        self.stalemate_flag = previous_state.stalemate_flag
+        self.game_phase = previous_state.game_phase
+        self.move_history = previous_state.move_history
+        self.position_history = previous_state.position_history
+
+        return True
+
+    def redo_move(self) -> bool:
+        """Redo the last undone move. Returns True if successful."""
+        if not self.can_redo():
+            return False
+
+        # Save current state to undo stack
+        current_state = self.copy()
+        current_state.undo_stack = []
+        current_state.redo_stack = []
+        self.undo_stack.append(current_state)
+
+        # Restore next state from redo stack
+        next_state = self.redo_stack.pop()
+
+        # Copy all fields from next state (except undo/redo stacks)
+        self.board = next_state.board
+        self.current_turn = next_state.current_turn
+        self.move_number = next_state.move_number
+        self.halfmove_clock = next_state.halfmove_clock
+        self.fullmove_number = next_state.fullmove_number
+        self.castling_rights = next_state.castling_rights
+        self.en_passant_target = next_state.en_passant_target
+        self.is_check = next_state.is_check
+        self.checkmate_flag = next_state.checkmate_flag
+        self.stalemate_flag = next_state.stalemate_flag
+        self.game_phase = next_state.game_phase
+        self.move_history = next_state.move_history
+        self.position_history = next_state.position_history
 
         return True
 
