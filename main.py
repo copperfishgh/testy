@@ -86,10 +86,17 @@ while running:
                     else:
                         # Try to move the piece
                         if square in possible_moves:
-                            # TODO: Implement actual move logic
-                            print(f"Move from {selected_square} to {square}")
-                            selected_square = None
-                            possible_moves = []
+                            # Execute the move
+                            move_successful = chess_board.make_move(
+                                selected_square[0], selected_square[1],
+                                square[0], square[1]
+                            )
+                            if move_successful:
+                                print(f"Move from {selected_square} to {square}")
+                                selected_square = None
+                                possible_moves = []
+                            else:
+                                print("Move failed!")  # This shouldn't happen if move validation works
                         elif square == selected_square:
                             # Deselect
                             selected_square = None

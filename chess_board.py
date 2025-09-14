@@ -441,6 +441,72 @@ class BoardState:
 
         return moves
 
+    def make_move(self, from_row: int, from_col: int, to_row: int, to_col: int) -> bool:
+        """Execute a move if it's legal. Returns True if move was successful."""
+        # Validate the move is in the list of possible moves
+        possible_moves = self.get_possible_moves(from_row, from_col)
+        if (to_row, to_col) not in possible_moves:
+            return False
+
+        # Get the piece to move
+        piece = self.get_piece(from_row, from_col)
+        if not piece:
+            return False
+
+        # Verify it's the correct player's turn
+        if piece.color != self.current_turn:
+            return False
+
+        # Store captured piece for move history
+        captured_piece = self.get_piece(to_row, to_col)
+
+        # Execute the move
+        self.set_piece(to_row, to_col, piece)
+        self.set_piece(from_row, from_col, None)
+
+        # Mark piece as moved (important for castling and pawn double moves)
+        piece.has_moved = True
+
+        # Handle special pawn moves
+        if piece.type == PieceType.PAWN:
+            # Check for double move to set en passant target
+            if abs(to_row - from_row) == 2:
+                self.en_passant_target = (from_row + (to_row - from_row) // 2, to_col)
+            else:
+                self.en_passant_target = None
+
+            # Handle en passant capture
+            if captured_piece is None and abs(to_col - from_col) == 1:
+                # This is an en passant capture, remove the captured pawn
+                captured_pawn_row = from_row
+                self.set_piece(captured_pawn_row, to_col, None)
+        else:
+            self.en_passant_target = None
+
+        # Update move counters
+        if captured_piece or piece.type == PieceType.PAWN:
+            self.halfmove_clock = 0
+        else:
+            self.halfmove_clock += 1
+
+        # Switch turns
+        self.current_turn = Color.BLACK if self.current_turn == Color.WHITE else Color.WHITE
+
+        if self.current_turn == Color.WHITE:
+            self.fullmove_number += 1
+
+        # Create and store move in history
+        move = Move(
+            from_square=(from_row, from_col),
+            to_square=(to_row, to_col),
+            piece=piece,
+            captured_piece=captured_piece,
+            move_number=self.fullmove_number
+        )
+        self.move_history.append(move)
+
+        return True
+
 # Example usage and testing
 if __name__ == "__main__":
     # Create a new board state
