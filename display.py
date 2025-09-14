@@ -105,8 +105,8 @@ class ChessDisplay:
         center_x = self.square_size // 2
         center_y = self.square_size // 2
 
-        # Draw translucent circle (green with 128 alpha for 50% transparency)
-        circle_color = (0, 128, 0, 128)  # Green with 50% transparency
+        # Draw translucent circle (light grey with alpha for subtle visibility)
+        circle_color = (*Colors.ANNOTATION_NEUTRAL, 100)  # Light grey with transparency
         pygame.draw.circle(circle_surface, circle_color, (center_x, center_y), circle_radius)
 
         return circle_surface

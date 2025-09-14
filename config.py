@@ -49,6 +49,12 @@ class Colors:
     RED_TEXT = (255, 0, 0)
     BLACK_TEXT = (0, 0, 0)
 
+    # Board annotation colors (neutral, warning, caution, positive)
+    ANNOTATION_NEUTRAL = (128, 128, 128)     # Light grey for neutral/informational
+    ANNOTATION_WARNING = (255, 0, 0)        # Red for strong warnings
+    ANNOTATION_CAUTION = (255, 255, 0)      # Yellow for awareness/caution
+    ANNOTATION_POSITIVE = (0, 255, 0)       # Green for good/positive
+
 class AudioConfig:
     """Audio system configuration"""
 
