@@ -238,6 +238,10 @@ class ChessDisplay:
         border_rect = pygame.Rect(x, y, self.square_size, self.square_size)
         pygame.draw.rect(screen, warning_color, border_rect, border_thickness)
 
+    def is_animation_active(self) -> bool:
+        """Check if any animations are currently running"""
+        return self.checkmate_animation_start_time is not None
+
     def start_checkmate_animation(self, board_state: BoardState) -> None:
         """Start the checkmate animation for the losing king"""
         import time

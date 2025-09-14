@@ -52,7 +52,9 @@ highlighted_moves = []
 
 # Rendering optimization
 needs_redraw = True  # Initially need to draw
-last_mouse_pos = (0, 0)  # Track mouse for hover effects
+last_hovered_square = None  # Track which board square mouse is over
+last_hover_was_legal = False  # Was the last hovered square a legal move?
+last_button_hover = False  # Track flip button hover state
 
 # Main game loop
 is_running = True
@@ -124,6 +126,9 @@ while is_running:
                                 selected_square_coords = square
                                 # Calculate possible moves for the selected piece
                                 highlighted_moves = board_state.get_possible_moves(square[0], square[1])
+                                # Reset hover state since highlighted_moves changed
+                                last_hovered_square = None
+                                last_hover_was_legal = False
                                 needs_redraw = True
                         else:
                             # Try to move the piece
@@ -153,11 +158,17 @@ while is_running:
                                 # Clear selection regardless
                                 selected_square_coords = None
                                 highlighted_moves = []
+                                # Reset hover state since highlighted_moves changed
+                                last_hovered_square = None
+                                last_hover_was_legal = False
                                 needs_redraw = True
                             elif square == selected_square_coords:
                                 # Deselect
                                 selected_square_coords = None
                                 highlighted_moves = []
+                                # Reset hover state since highlighted_moves changed
+                                last_hovered_square = None
+                                last_hover_was_legal = False
                                 needs_redraw = True
                             else:
                                 # Select different piece
@@ -165,13 +176,42 @@ while is_running:
                                 if piece and piece.color == board_state.current_turn:
                                     selected_square_coords = square
                                     highlighted_moves = board_state.get_possible_moves(square[0], square[1])
+                                    # Reset hover state since highlighted_moves changed
+                                    last_hovered_square = None
+                                    last_hover_was_legal = False
                                     needs_redraw = True
     
-    # Check for mouse movement (for hover effects)
+    # Check for smart hover detection (only redraw when entering/leaving legal move squares)
     current_mouse_pos = pygame.mouse.get_pos()
-    if current_mouse_pos != last_mouse_pos:
-        last_mouse_pos = current_mouse_pos
-        needs_redraw = True  # Redraw for hover effects
+
+    # Get current square under mouse
+    current_hovered_square = display.get_square_from_mouse(current_mouse_pos)
+    if current_hovered_square and is_board_flipped:
+        current_hovered_square = (7 - current_hovered_square[0], 7 - current_hovered_square[1])
+
+    # Check if current hover is over a legal move square
+    current_hover_is_legal = (current_hovered_square in highlighted_moves) if current_hovered_square else False
+
+    # Only redraw if hover state changed in a meaningful way
+    hover_state_changed = (
+        current_hovered_square != last_hovered_square or  # Different square
+        current_hover_is_legal != last_hover_was_legal    # Legal status changed
+    )
+
+    if hover_state_changed:
+        last_hovered_square = current_hovered_square
+        last_hover_was_legal = current_hover_is_legal
+        needs_redraw = True
+
+    # Also check button hover (still need this for flip button)
+    current_button_hover = flip_button_rect.collidepoint(current_mouse_pos)
+    if current_button_hover != last_button_hover:
+        last_button_hover = current_button_hover
+        needs_redraw = True
+
+    # Force redraws during animations (temporarily return to continuous rendering)
+    if display.is_animation_active():
+        needs_redraw = True
 
     # Only redraw if something changed
     if needs_redraw:

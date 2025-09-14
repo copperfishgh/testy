@@ -989,6 +989,9 @@ class BoardState:
         # Restore previous state from undo stack
         previous_state = self.undo_stack.pop()
 
+        # Invalidate hanging pieces cache since board state will change
+        self._invalidate_hanging_pieces_cache()
+
         # Copy all fields from previous state (except undo/redo stacks)
         self.board = previous_state.board
         self.current_turn = previous_state.current_turn
@@ -1019,6 +1022,9 @@ class BoardState:
 
         # Restore next state from redo stack
         next_state = self.redo_stack.pop()
+
+        # Invalidate hanging pieces cache since board state will change
+        self._invalidate_hanging_pieces_cache()
 
         # Copy all fields from next state (except undo/redo stacks)
         self.board = next_state.board
