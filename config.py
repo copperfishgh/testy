@@ -65,6 +65,12 @@ class Colors:
     ANNOTATION_CAUTION = (255, 255, 0)      # Yellow for awareness/caution
     ANNOTATION_POSITIVE = (0, 255, 0)       # Green for good/positive
 
+    # Material-based hanging piece colors (value-weighted)
+    HANGING_LOW_VALUE = (255, 150, 150)     # Light red for low-value pieces (1-3 points)
+    HANGING_HIGH_VALUE = (200, 0, 0)        # Dark red for high-value pieces (5+ points)
+    OPPORTUNITY_LOW_VALUE = (150, 255, 150) # Light green for low-value opponent pieces
+    OPPORTUNITY_HIGH_VALUE = (0, 200, 0)    # Dark green for high-value opponent pieces
+
     # UI Panel colors
     HELP_PANEL_BACKGROUND = (250, 250, 250) # Light grey panel background
     CHECKBOX_SHADOW = (200, 200, 200)       # Checkbox shadow
@@ -121,3 +127,13 @@ class GameConstants:
     # Piece size factors
     PAWN_SIZE_FACTOR = 0.65     # Pawns are 65% of square size
     PIECE_SIZE_FACTOR = 0.75    # Other pieces are 75% of square size
+
+    # Standard chess piece values for material evaluation
+    PIECE_VALUES = {
+        'P': 1,    # Pawn
+        'N': 3,    # Knight
+        'B': 3,    # Bishop
+        'R': 5,    # Rook
+        'Q': 9,    # Queen
+        'K': 0     # King (invaluable/special case)
+    }

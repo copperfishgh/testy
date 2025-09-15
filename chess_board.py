@@ -49,6 +49,11 @@ class Piece:
         symbol = self.type.value
         return symbol.upper() if self.color == Color.WHITE else symbol.lower()
 
+    def get_value(self) -> int:
+        """Get the material value of this piece"""
+        from config import GameConstants
+        return GameConstants.PIECE_VALUES.get(self.type.value.upper(), 0)
+
 @dataclass
 class CastlingRights:
     """Tracks castling rights for both colors"""

@@ -233,15 +233,20 @@ class ChessDisplay:
         """Draw the pre-created move indicator at specified position"""
         screen.blit(self.move_indicator, (x, y))
 
-    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_player_piece: bool) -> None:
-        """Draw an indicator for hanging pieces - red for player (danger), green for opponent (opportunity)"""
-        border_thickness = 4
+    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_player_piece: bool, piece_value: int = 1) -> None:
+        """Draw a material-weighted indicator with thickness indicating piece value"""
 
-        # Choose color based on whether it's the player's piece or opponent's piece
+        # Simple, clear colors
         if is_player_piece:
             indicator_color = Colors.ANNOTATION_WARNING  # Red for player's hanging pieces (danger)
         else:
             indicator_color = Colors.ANNOTATION_POSITIVE  # Green for opponent's hanging pieces (opportunity)
+
+        # Border thickness scales with piece value (2-8 pixel range)
+        max_value = 9  # Queen value
+        min_thickness = 2
+        max_thickness = 8
+        border_thickness = int(min_thickness + (piece_value / max_value) * (max_thickness - min_thickness))
 
         # Draw border on all four edges
         border_rect = pygame.Rect(x, y, self.square_size, self.square_size)
@@ -353,7 +358,8 @@ class ChessDisplay:
                             # Player = pieces on bottom (white when not flipped, black when flipped)
                             player_color = Color.BLACK if is_board_flipped else Color.WHITE
                             is_player_piece = (evaluation_piece.color == player_color)
-                            self.draw_hanging_piece_indicator(screen, x, y, is_player_piece)
+                            piece_value = evaluation_piece.get_value()
+                            self.draw_hanging_piece_indicator(screen, x, y, is_player_piece, piece_value)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
