@@ -192,6 +192,17 @@ while is_running:
     # Check if current hover is over a legal move square
     current_hover_is_legal = (current_hovered_square in highlighted_moves) if current_hovered_square else False
 
+    # Create preview board state if hovering over a legal move
+    preview_board_state = None
+    if current_hover_is_legal and selected_square_coords:
+        # Create a copy of the board state for preview
+        preview_board_state = board_state.copy()
+
+        # Execute the candidate move on the preview board
+        from_row, from_col = selected_square_coords
+        to_row, to_col = current_hovered_square
+        preview_board_state.make_move(from_row, from_col, to_row, to_col)
+
     # Only redraw if hover state changed in a meaningful way
     hover_state_changed = (
         current_hovered_square != last_hovered_square or  # Different square
@@ -216,7 +227,7 @@ while is_running:
     # Only redraw if something changed
     if needs_redraw:
         # Draw the chess board (with flip consideration)
-        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped)
+        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state)
 
         # Draw flip button
         button_color = Colors.BUTTON_HOVER_COLOR if flip_button_rect.collidepoint(current_mouse_pos) else Colors.BUTTON_BACKGROUND_COLOR

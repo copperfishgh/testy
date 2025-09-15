@@ -296,7 +296,8 @@ class ChessDisplay:
             screen.blit(text_surface, text_rect)
 
     def draw_board(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
-                   highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False) -> None:
+                   highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False,
+                   preview_board_state: Optional[BoardState] = None) -> None:
         """Draw the chess board with pieces"""
         if highlighted_moves is None:
             highlighted_moves = []
@@ -338,14 +339,21 @@ class ChessDisplay:
                     self.draw_move_indicator(screen, x, y)
 
                 # Draw hanging piece indicator if enabled
-                if self.is_help_option_enabled("hanging_pieces") and piece:
-                    hanging_pieces = board_state.get_hanging_pieces(piece.color)
-                    if (row, col) in hanging_pieces:
-                        # Determine player color based on board orientation
-                        # Player = pieces on bottom (white when not flipped, black when flipped)
-                        player_color = Color.BLACK if is_board_flipped else Color.WHITE
-                        is_player_piece = (piece.color == player_color)
-                        self.draw_hanging_piece_indicator(screen, x, y, is_player_piece)
+                if self.is_help_option_enabled("hanging_pieces"):
+                    # Use preview board state for helper evaluation if available
+                    evaluation_board = preview_board_state if preview_board_state else board_state
+
+                    # Get the piece that would be at this position in the evaluation board
+                    evaluation_piece = evaluation_board.get_piece(row, col)
+
+                    if evaluation_piece:
+                        hanging_pieces = evaluation_board.get_hanging_pieces(evaluation_piece.color)
+                        if (row, col) in hanging_pieces:
+                            # Determine player color based on board orientation
+                            # Player = pieces on bottom (white when not flipped, black when flipped)
+                            player_color = Color.BLACK if is_board_flipped else Color.WHITE
+                            is_player_piece = (evaluation_piece.color == player_color)
+                            self.draw_hanging_piece_indicator(screen, x, y, is_player_piece)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
@@ -513,7 +521,8 @@ class ChessDisplay:
             self.draw_text(screen, move_text, history_x, history_y + 30 + i * line_height, self.font_small)
     
     def update_display(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
-                      highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False) -> None:
+                      highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False,
+                      preview_board_state: Optional[BoardState] = None) -> None:
         """Update the entire display"""
         # Check for checkmate and start animation if needed
         if board_state.is_in_checkmate and self.checkmate_animation_start_time is None:
@@ -527,7 +536,7 @@ class ChessDisplay:
         screen.fill(self.RGB_WHITE)
 
         # Draw all components
-        self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped)
+        self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state)
         self.draw_help_panel(screen)
 
         # Draw stalemate overlay if needed
