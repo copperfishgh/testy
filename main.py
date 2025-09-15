@@ -50,6 +50,10 @@ is_board_flipped = False
 selected_square_coords = None
 highlighted_moves = []
 
+# Drag state
+dragging_piece = None  # The piece being dragged
+drag_origin = None     # Original square coordinates
+
 # Rendering optimization
 needs_redraw = True  # Initially need to draw
 last_hovered_square = None  # Track which board square mouse is over
@@ -120,10 +124,14 @@ while is_running:
                             square = (7 - square[0], 7 - square[1])
 
                         if selected_square_coords is None:
-                            # Select a piece
+                            # Start dragging a piece
                             piece = board_state.get_piece(square[0], square[1])
                             if piece and piece.color == board_state.current_turn:
+                                # Set up drag state
+                                dragging_piece = piece
+                                drag_origin = square
                                 selected_square_coords = square
+
                                 # Calculate possible moves for the selected piece
                                 highlighted_moves = board_state.get_possible_moves(square[0], square[1])
                                 # Reset hover state since highlighted_moves changed
@@ -180,7 +188,44 @@ while is_running:
                                     last_hovered_square = None
                                     last_hover_was_legal = False
                                     needs_redraw = True
-    
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if dragging_piece and drag_origin:
+                # Complete the drag operation
+                mouse_pos = pygame.mouse.get_pos()
+                target_square = display.get_square_from_mouse(mouse_pos)
+
+                if target_square:
+                    # Convert square coordinates if board is flipped
+                    if is_board_flipped:
+                        target_square = (7 - target_square[0], 7 - target_square[1])
+
+                    # Try to complete the move
+                    if target_square in highlighted_moves:
+                        # Check if this is a pawn promotion
+                        if board_state.is_pawn_promotion(drag_origin[0], drag_origin[1], target_square[0], target_square[1]):
+                            # Show promotion dialog
+                            promotion_piece = display.show_promotion_dialog(screen, dragging_piece.color)
+                            # Execute the move with promotion
+                            move_successful = board_state.make_move_with_promotion(
+                                drag_origin[0], drag_origin[1],
+                                target_square[0], target_square[1], promotion_piece
+                            )
+                        else:
+                            # Execute regular move
+                            move_successful = board_state.make_move(
+                                drag_origin[0], drag_origin[1],
+                                target_square[0], target_square[1]
+                            )
+
+                # Reset drag state regardless of whether move was successful
+                dragging_piece = None
+                drag_origin = None
+                selected_square_coords = None
+                highlighted_moves = []
+                last_hovered_square = None
+                last_hover_was_legal = False
+                needs_redraw = True
+
     # Check for smart hover detection (only redraw when entering/leaving legal move squares)
     current_mouse_pos = pygame.mouse.get_pos()
 
@@ -227,7 +272,11 @@ while is_running:
     # Only redraw if something changed
     if needs_redraw:
         # Draw the chess board (with flip consideration)
-        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state)
+        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state, dragging_piece, drag_origin)
+
+        # Draw dragged piece snapped to square center
+        if dragging_piece:
+            display.draw_dragged_piece(screen, dragging_piece, current_mouse_pos, is_board_flipped)
 
         # Draw flip button
         button_color = Colors.BUTTON_HOVER_COLOR if flip_button_rect.collidepoint(current_mouse_pos) else Colors.BUTTON_BACKGROUND_COLOR

@@ -35,8 +35,14 @@ Chess has two main components: **tactical accuracy** (not hanging pieces) and **
 - Board flipping and responsive design
 - Checkmate/stalemate detection with visual effects
 
+**Latest Features:**
+- Material-weighted hanging pieces system with value-based visual indicators
+- Move preview system showing tactical consequences before committing
+- Lichess-style last move highlighting for turn indication
+- Persistent settings system for user preferences
+
 **Still Needed for Full Testy Vision:**
-- Tactical helper system (visual board annotations)
+- Additional tactical helpers (forks, pins, skewers)
 - Strategic helper system (text analysis under board)
 - Real-time position analysis engine
 
@@ -47,11 +53,20 @@ python main.py
 ```
 
 **Controls:**
-- **Mouse** - Click to select and move pieces
+- **Mouse** - Drag and drop pieces with square snapping, hover over legal moves for preview
 - **F** - Flip board perspective
 - **U** - Undo last move
 - **R** - Redo move
+- **H** - Toggle hanging pieces helper
 - **ESC** - Quit
+
+**Visual Features:**
+- **Drag-and-Drop Movement** - Smooth piece dragging with automatic square snapping
+- **Last Move Highlighting** - Green overlay on from/to squares (lichess-style)
+- **Material-Weighted Indicators** - Border thickness reflects piece value (2-8px)
+- **Move Preview** - Real-time tactical analysis when dragging over legal moves
+- **Performance Optimized** - Annotations only compute when entering different legal squares
+- **Persistent Settings** - Helper preferences saved between sessions
 
 ## Technical Details
 
@@ -93,20 +108,32 @@ Testy separates chess analysis into two distinct helper categories with **granul
 └─────────────────┴─────────────────────┘
 ```
 
-### 🔴 Tactical Helpers (Default, Always Active)
+### 🔴 Tactical Helpers (Checkbox Controlled)
 **Visual annotations directly on the chess board:**
-- **Hanging Pieces** - Red outlines around undefended pieces
+
+**Hanging Pieces (Implemented):**
+- Material-weighted visual indicators with border thickness showing piece value
+- Red borders for your hanging pieces (danger), green for opponent's (opportunity)
+- Border thickness scales with piece value: pawn=2px, knight/bishop=4px, rook=6px, queen=8px
+- Player-perspective colors that work correctly with board flipping
+
+**Future Tactical Helpers:**
 - **Immediate Threats** - Warning symbols for mate in 1, checks
 - **Simple Tactics** - Highlight forks, pins, skewers (1-2 move depth)
 - **Material Wins** - Show squares where you can capture for free
 - **Blunder Prevention** - Block moves that hang material
 
-**Preview Analysis System:**
-- **Current Position**: Shows tactical annotations for the current board state
-- **Move Preview**: When piece selected and hovering over legal squares, shows "what if" analysis
-- **Either/Or Display**: Shows current OR preview annotations, never both simultaneously
-- **Real-time Feedback**: Instant tactical analysis when hovering over different legal moves
-- **Performance Optimized**: Analysis only triggers on discrete square changes, not mouse movement
+**Drag-and-Drop System (Implemented):**
+- **Smooth Piece Movement**: Click and drag pieces with automatic square snapping
+- **Real-time Preview**: As you drag over legal squares, see tactical consequences instantly
+- **Performance Optimized**: Annotations only recalculate when entering different legal destinations
+- **Visual Feedback**: Piece centers itself in current square, legal moves highlighted
+- **Complete Integration**: Works seamlessly with all helpers and board flipping
+
+**Move Preview System (Implemented):**
+- **Preview Board State**: Creates temporary board state with candidate move executed
+- **Real-time Helper Updates**: Hanging pieces indicators update to show post-move position
+- **Complete Tactical Awareness**: See which pieces would be hanging after your move before committing
 
 *Critical alerts that prevent immediate material loss or checkmate*
 

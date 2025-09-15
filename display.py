@@ -302,7 +302,7 @@ class ChessDisplay:
 
     def draw_board(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
                    highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False,
-                   preview_board_state: Optional[BoardState] = None) -> None:
+                   preview_board_state: Optional[BoardState] = None, dragging_piece=None, drag_origin=None) -> None:
         """Draw the chess board with pieces"""
         if highlighted_moves is None:
             highlighted_moves = []
@@ -334,9 +334,9 @@ class ChessDisplay:
                 pygame.draw.rect(screen, color,
                                (x, y, self.square_size, self.square_size))
 
-                # Draw piece if present
+                # Draw piece if present (skip if being dragged)
                 piece = board_state.get_piece(row, col)
-                if piece:
+                if piece and not (dragging_piece and drag_origin and (row, col) == drag_origin):
                     self.draw_piece(screen, piece, x, y, row, col)
 
                 # Draw move indicator circle for possible moves
@@ -369,6 +369,31 @@ class ChessDisplay:
         
         # Draw coordinates
         self.draw_coordinates(screen, is_board_flipped)
+
+    def draw_dragged_piece(self, screen, piece, mouse_pos: Tuple[int, int], is_board_flipped: bool = False) -> None:
+        """Draw a piece being dragged, snapped to center of square under mouse"""
+        if piece:
+            # Get the square under the mouse
+            current_square = self.get_square_from_mouse(mouse_pos)
+
+            if current_square:
+                # Convert to board coordinates if needed
+                if is_board_flipped:
+                    board_square = (7 - current_square[0], 7 - current_square[1])
+                else:
+                    board_square = current_square
+
+                # Get the display position of this square
+                square_pos = self.get_square_display_position(board_square[0], board_square[1], is_board_flipped)
+                if square_pos:
+                    piece_x, piece_y = square_pos
+                    # Draw the piece centered in the square
+                    self.draw_piece(screen, piece, piece_x, piece_y, -1, -1)
+            else:
+                # If not over a square, draw at cursor position
+                piece_x = mouse_pos[0] - self.square_size // 2
+                piece_y = mouse_pos[1] - self.square_size // 2
+                self.draw_piece(screen, piece, piece_x, piece_y, -1, -1)
     
     def draw_piece(self, screen, piece: Piece, x: int, y: int, board_row: int = -1, board_col: int = -1) -> None:
         """Draw a piece at the specified screen coordinates"""
@@ -496,6 +521,17 @@ class ChessDisplay:
         text_surface = font.render(text, True, color)
         screen.blit(text_surface, (x, y))
     
+    def get_square_display_position(self, row: int, col: int, is_board_flipped: bool = False) -> Optional[Tuple[int, int]]:
+        """Get the display position (x, y) of a board square"""
+        # Apply board flipping for display coordinates
+        display_row = (7 - row) if is_board_flipped else row
+        display_col = (7 - col) if is_board_flipped else col
+
+        x = self.board_margin_x + display_col * self.square_size
+        y = self.board_margin_y + display_row * self.square_size
+
+        return (x, y)
+
     def get_square_from_mouse(self, mouse_pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """Convert mouse position to board square coordinates"""
         mouse_x, mouse_y = mouse_pos
@@ -528,7 +564,7 @@ class ChessDisplay:
     
     def update_display(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
                       highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False,
-                      preview_board_state: Optional[BoardState] = None) -> None:
+                      preview_board_state: Optional[BoardState] = None, dragging_piece=None, drag_origin=None) -> None:
         """Update the entire display"""
         # Check for checkmate and start animation if needed
         if board_state.is_in_checkmate and self.checkmate_animation_start_time is None:
@@ -542,7 +578,7 @@ class ChessDisplay:
         screen.fill(self.RGB_WHITE)
 
         # Draw all components
-        self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state)
+        self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state, dragging_piece, drag_origin)
         self.draw_help_panel(screen)
 
         # Draw stalemate overlay if needed
