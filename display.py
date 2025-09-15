@@ -233,12 +233,12 @@ class ChessDisplay:
         """Draw the pre-created move indicator at specified position"""
         screen.blit(self.move_indicator, (x, y))
 
-    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_player_piece: bool) -> None:
-        """Draw an indicator for hanging pieces - red for player (danger), green for opponent (opportunity)"""
+    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_active_player: bool) -> None:
+        """Draw an indicator for hanging pieces - red for active player (danger), green for opponent (opportunity)"""
         border_thickness = 4
 
-        # Choose color based on whether it's the player's piece or opponent's piece
-        if is_player_piece:
+        # Choose color based on whether it's the active player's piece or opponent's
+        if is_active_player:
             indicator_color = Colors.ANNOTATION_WARNING  # Red for player's hanging pieces (danger)
         else:
             indicator_color = Colors.ANNOTATION_POSITIVE  # Green for opponent's hanging pieces (opportunity)
@@ -246,48 +246,6 @@ class ChessDisplay:
         # Draw border on all four edges
         border_rect = pygame.Rect(x, y, self.square_size, self.square_size)
         pygame.draw.rect(screen, indicator_color, border_rect, border_thickness)
-
-    def draw_turn_indicator(self, screen, board_state: BoardState, is_board_flipped: bool) -> None:
-        """Draw LED blue rectangle on the current player's side of the board"""
-        # Board dimensions
-        board_size = self.square_size * 8
-        board_left = self.board_margin_x
-        board_top = self.board_margin_y
-        board_bottom = board_top + board_size
-
-        # LED blue color for turn indicator
-        led_blue = (40, 100, 255)
-
-        # Simple solid LED blue rectangle - twice the size of the board border
-        board_border_thickness = 2  # The black border around the board
-        indicator_thickness = board_border_thickness * 2  # Twice the border size
-
-        # Create rectangle spanning the width of the board
-        indicator_rect = pygame.Rect(board_left, 0, board_size, indicator_thickness)
-
-        # Position based on whose turn it is AND board orientation
-        # White pieces are on bottom when not flipped, on top when flipped
-        # Black pieces are on top when not flipped, on bottom when flipped
-
-        if board_state.current_turn == Color.WHITE:
-            # White's turn - show indicator on white's side
-            if is_board_flipped:
-                # Board flipped: white pieces are on top
-                indicator_rect.y = board_top - indicator_thickness - 2
-            else:
-                # Normal: white pieces are on bottom
-                indicator_rect.y = board_bottom + 2
-        else:
-            # Black's turn - show indicator on black's side
-            if is_board_flipped:
-                # Board flipped: black pieces are on bottom
-                indicator_rect.y = board_bottom + 2
-            else:
-                # Normal: black pieces are on top
-                indicator_rect.y = board_top - indicator_thickness - 2
-
-        # Draw the solid LED blue rectangle
-        pygame.draw.rect(screen, led_blue, indicator_rect)
 
     def is_animation_active(self) -> bool:
         """Check if any animations are currently running"""
@@ -377,11 +335,9 @@ class ChessDisplay:
                 if self.is_help_option_enabled("hanging_pieces") and piece:
                     hanging_pieces = board_state.get_hanging_pieces(piece.color)
                     if (row, col) in hanging_pieces:
-                        # Determine player color based on board orientation
-                        # Player = pieces on bottom (white when not flipped, black when flipped)
-                        player_color = Color.BLACK if is_board_flipped else Color.WHITE
-                        is_player_piece = (piece.color == player_color)
-                        self.draw_hanging_piece_indicator(screen, x, y, is_player_piece)
+                        # Determine if this piece belongs to the active player
+                        is_active_player = (piece.color == board_state.current_turn)
+                        self.draw_hanging_piece_indicator(screen, x, y, is_active_player)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
@@ -565,7 +521,6 @@ class ChessDisplay:
         # Draw all components
         self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped)
         self.draw_help_panel(screen)
-        self.draw_turn_indicator(screen, board_state, is_board_flipped)
 
         # Draw stalemate overlay if needed
         if board_state.is_in_stalemate:
