@@ -314,6 +314,12 @@ class ChessDisplay:
                 is_light = (row + col) % 2 == 0
                 color = self.LIGHT_SQUARE if is_light else self.DARK_SQUARE
 
+                # Apply last move highlighting (lichess-style green overlay)
+                if board_state.last_move:
+                    from_square, to_square = board_state.last_move
+                    if (row, col) == from_square or (row, col) == to_square:
+                        color = Colors.LIGHT_SQUARE_LAST_MOVE if is_light else Colors.DARK_SQUARE_LAST_MOVE
+
                 # Highlight selected square only
                 if selected_square_coords and selected_square_coords == (row, col):
                     color = self.SELECTED

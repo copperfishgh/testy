@@ -132,7 +132,10 @@ class BoardState:
     
     # Move history
     move_history: List[Move] = field(default_factory=list)
-    
+
+    # Last move for highlighting (None if no moves made yet)
+    last_move: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None  # ((from_row, from_col), (to_row, to_col))
+
     # Position repetition tracking (for threefold repetition rule)
     position_history: List[str] = field(default_factory=list)
 
@@ -828,6 +831,9 @@ class BoardState:
         )
         self.move_history.append(move)
 
+        # Update last move for highlighting
+        self.last_move = ((from_row, from_col), (to_row, to_col))
+
         return True
 
     def make_move_with_promotion(self, from_row: int, from_col: int, to_row: int, to_col: int,
@@ -917,6 +923,9 @@ class BoardState:
         )
         self.move_history.append(move)
 
+        # Update last move for highlighting
+        self.last_move = ((from_row, from_col), (to_row, to_col))
+
         return True
 
     def is_pawn_promotion(self, from_row: int, from_col: int, to_row: int, to_col: int) -> bool:
@@ -1005,6 +1014,7 @@ class BoardState:
         self.is_in_stalemate = previous_state.is_in_stalemate
         self.game_phase = previous_state.game_phase
         self.move_history = previous_state.move_history
+        self.last_move = previous_state.last_move
         self.position_history = previous_state.position_history
 
         return True
@@ -1039,6 +1049,7 @@ class BoardState:
         self.is_in_stalemate = next_state.is_in_stalemate
         self.game_phase = next_state.game_phase
         self.move_history = next_state.move_history
+        self.last_move = next_state.last_move
         self.position_history = next_state.position_history
 
         return True

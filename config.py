@@ -42,6 +42,10 @@ class Colors:
     LIGHT_SQUARE = (240, 217, 181)  # Light brown
     DARK_SQUARE = (181, 136, 99)    # Dark brown
 
+    # Last move highlighting colors (lichess-style)
+    LIGHT_SQUARE_LAST_MOVE = (205, 210, 106)  # Light green overlay on light squares
+    DARK_SQUARE_LAST_MOVE = (170, 162, 58)    # Dark green overlay on dark squares
+
     # UI highlight colors
     HIGHLIGHT = (255, 255, 0)       # Yellow for highlights
     SELECTED = (160, 160, 160)      # Neutral grey for selected square
