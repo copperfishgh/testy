@@ -445,73 +445,6 @@ class ChessDisplay:
             text_rect = text_surface.get_rect(center=(x, y))
             screen.blit(text_surface, text_rect)
     
-    def draw_game_info(self, screen, board_state: BoardState) -> None:
-        """Draw game information panel"""
-        # Position info panel to the right of the board with minimal spacing
-        info_x = self.board_margin_x + self.board_size + 10
-        info_y = self.board_margin_y
-        line_height = 30
-        
-        # Current turn
-        turn_text = f"Turn: {'White' if board_state.current_turn == Color.WHITE else 'Black'}"
-        self.draw_text(screen, turn_text, info_x, info_y, self.font_medium)
-        
-        # Move number
-        move_text = f"Move: {board_state.fullmove_number}"
-        self.draw_text(screen, move_text, info_x, info_y + line_height, self.font_medium)
-        
-        # Halfmove clock (for 50-move rule)
-        halfmove_text = f"Halfmove Clock: {board_state.halfmove_clock}"
-        self.draw_text(screen, halfmove_text, info_x, info_y + line_height * 2, self.font_small)
-        
-        # Castling rights
-        castling_y = info_y + line_height * 4
-        self.draw_text(screen, "Castling Rights:", info_x, castling_y, self.font_medium)
-        
-        white_castling = []
-        if board_state.castling_rights.white_kingside:
-            white_castling.append("K")
-        if board_state.castling_rights.white_queenside:
-            white_castling.append("Q")
-        
-        black_castling = []
-        if board_state.castling_rights.black_kingside:
-            black_castling.append("k")
-        if board_state.castling_rights.black_queenside:
-            black_castling.append("q")
-        
-        castling_text = f"White: {''.join(white_castling) if white_castling else '-'}"
-        self.draw_text(screen, castling_text, info_x, castling_y + 25, self.font_small)
-        
-        castling_text = f"Black: {''.join(black_castling) if black_castling else '-'}"
-        self.draw_text(screen, castling_text, info_x, castling_y + 45, self.font_small)
-        
-        # En passant target
-        if board_state.en_passant_target:
-            ep_row, ep_col = board_state.en_passant_target
-            ep_square = f"{chr(ord('a') + ep_col)}{8 - ep_row}"
-            ep_text = f"En Passant: {ep_square}"
-        else:
-            ep_text = "En Passant: -"
-        self.draw_text(screen, ep_text, info_x, castling_y + 80, self.font_small)
-        
-        # Game status
-        status_y = castling_y + 120
-        if board_state.is_in_checkmate:
-            status_text = "CHECKMATE!"
-            status_color = Colors.STATUS_CHECKMATE
-        elif board_state.is_in_stalemate:
-            status_text = "STALEMATE"
-            status_color = Colors.STATUS_CAPTURE
-        elif board_state.is_check:
-            status_text = "CHECK"
-            status_color = Colors.STATUS_CHECK
-        else:
-            status_text = "Game in Progress"
-            status_color = Colors.STATUS_NORMAL
-        
-        self.draw_text(screen, status_text, info_x, status_y, self.font_medium, status_color)
-    
     def draw_text(self, screen, text: str, x: int, y: int, font: pygame.font.Font, 
                   color: Tuple[int, int, int] = None) -> None:
         """Draw text at the specified position"""
@@ -547,20 +480,6 @@ class ChessDisplay:
                 return (row, col)
         
         return None
-    
-    def draw_move_history(self, screen, board_state: BoardState, max_moves: int = 10) -> None:
-        """Draw recent move history"""
-        history_x = self.board_margin_x
-        history_y = self.board_margin_y + self.board_size + 10
-        line_height = 20
-        
-        self.draw_text(screen, "Recent Moves:", history_x, history_y, self.font_medium)
-        
-        # Show last few moves
-        recent_moves = board_state.move_history[-max_moves:]
-        for i, move in enumerate(recent_moves):
-            move_text = f"{i+1}. {move.notation}"
-            self.draw_text(screen, move_text, history_x, history_y + 30 + i * line_height, self.font_small)
     
     def update_display(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
                       highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False,

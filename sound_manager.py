@@ -6,7 +6,6 @@ creation, and playback for various game events.
 """
 
 import pygame
-import math
 from typing import Optional
 from config import AudioConfig
 
@@ -17,8 +16,6 @@ class SoundManager:
     def __init__(self):
         """Initialize the sound manager and pygame mixer"""
         self.error_sound: Optional[pygame.mixer.Sound] = None
-        self.move_sound: Optional[pygame.mixer.Sound] = None
-        self.capture_sound: Optional[pygame.mixer.Sound] = None
 
         self._initialize_mixer()
         self._create_sounds()
@@ -39,9 +36,6 @@ class SoundManager:
     def _create_sounds(self) -> None:
         """Create all game sounds"""
         self.error_sound = self._create_error_sound()
-        # Future sounds can be added here
-        # self.move_sound = self._create_move_sound()
-        # self.capture_sound = self._create_capture_sound()
 
     def _create_error_sound(self) -> Optional[pygame.mixer.Sound]:
         """Create a simple error beep sound using pygame"""
@@ -106,23 +100,6 @@ class SoundManager:
         else:
             self._play_system_beep()
 
-    def play_move_sound(self) -> None:
-        """Play sound for successful moves"""
-        if self.move_sound:
-            try:
-                self.move_sound.play()
-            except pygame.error as e:
-                print(f"Failed to play move sound: {e}")
-        # For now, no sound for moves - can be implemented later
-
-    def play_capture_sound(self) -> None:
-        """Play sound for piece captures"""
-        if self.capture_sound:
-            try:
-                self.capture_sound.play()
-            except pygame.error as e:
-                print(f"Failed to play capture sound: {e}")
-        # For now, no sound for captures - can be implemented later
 
     def cleanup(self) -> None:
         """Clean up sound resources"""
@@ -144,9 +121,3 @@ def get_sound_manager() -> SoundManager:
     return _sound_manager
 
 
-def cleanup_sound_system() -> None:
-    """Clean up the sound system"""
-    global _sound_manager
-    if _sound_manager:
-        _sound_manager.cleanup()
-        _sound_manager = None

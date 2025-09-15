@@ -9,7 +9,7 @@ This module defines a comprehensive chess board state that tracks:
 - Game state information (turn, check status, etc.)
 """
 
-from typing import Optional, List, Tuple, Dict, Any
+from typing import Optional, List, Tuple
 from enum import Enum
 from dataclasses import dataclass, field
 import copy
