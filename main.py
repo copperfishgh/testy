@@ -1,9 +1,12 @@
 import pygame
 import sys
+import os
 from chess_board import BoardState
 from display import ChessDisplay
 from config import GameConfig, Colors
 from sound_manager import get_sound_manager
+
+# Set window behavior before pygame init (removed problematic positioning)
 
 # Initialize Pygame
 pygame.init()
@@ -20,7 +23,8 @@ WINDOW_WIDTH = int(WINDOW_HEIGHT * GameConfig.WINDOW_ASPECT_RATIO)
 
 # Create display
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("Chess Game")
+pygame.display.set_caption("Testy")
+
 
 # Initialize sound system
 sound_manager = get_sound_manager()
@@ -50,6 +54,7 @@ is_board_flipped = False
 selected_square_coords = None
 highlighted_moves = []
 
+
 # Drag state
 dragging_piece = None  # The piece being dragged
 drag_origin = None     # Original square coordinates
@@ -59,6 +64,7 @@ needs_redraw = True  # Initially need to draw
 last_hovered_square = None  # Track which board square mouse is over
 last_hover_was_legal = False  # Was the last hovered square a legal move?
 last_button_hover = False  # Track flip button hover state
+
 
 # Main game loop
 is_running = True
