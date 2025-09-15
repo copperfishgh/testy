@@ -183,7 +183,44 @@ class BoardState:
         # White back rank
         for col, piece_type in enumerate(piece_order):
             self.board[7][col] = Piece(piece_type, Color.WHITE)
-    
+
+    def reset_to_initial_position(self) -> None:
+        """Reset the entire game state to the initial starting position"""
+        # Reset board to starting position
+        self.setup_initial_position()
+
+        # Reset all game state variables
+        self.current_turn = Color.WHITE
+        self.move_number = 1
+        self.halfmove_clock = 0
+        self.fullmove_number = 1
+
+        # Reset castling rights
+        self.castling_rights = CastlingRights()
+
+        # Reset en passant
+        self.en_passant_target = None
+
+        # Reset game status
+        self.is_check = False
+        self.is_in_checkmate = False
+        self.is_in_stalemate = False
+        self.game_phase = GamePhase.OPENING
+
+        # Clear move history
+        self.move_history = []
+        self.last_move = None
+        self.position_history = []
+
+        # Clear undo/redo stacks
+        self.undo_stack = []
+        self.redo_stack = []
+
+        # Invalidate hanging pieces cache
+        self._cached_hanging_pieces_white = []
+        self._cached_hanging_pieces_black = []
+        self._hanging_pieces_cache_valid = False
+
     def get_piece(self, row: int, col: int) -> Optional[Piece]:
         """Get piece at a specific position"""
         if 0 <= row < 8 and 0 <= col < 8:

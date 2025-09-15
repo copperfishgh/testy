@@ -102,6 +102,17 @@ while is_running:
             elif event.key == pygame.K_h:  # H key to toggle hanging pieces
                 display.toggle_help_option("hanging_pieces")
                 needs_redraw = True
+            elif event.key == pygame.K_BACKQUOTE:  # Tilde key (~) to reset game
+                board_state.reset_to_initial_position()
+                # Clear any current selection and highlights
+                selected_square_coords = None
+                highlighted_moves = []
+                dragging_piece = None
+                drag_origin = None
+                # Reset hover states
+                last_hovered_square = None
+                last_hover_was_legal = False
+                needs_redraw = True
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             
