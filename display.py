@@ -233,12 +233,12 @@ class ChessDisplay:
         """Draw the pre-created move indicator at specified position"""
         screen.blit(self.move_indicator, (x, y))
 
-    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_active_player: bool) -> None:
-        """Draw an indicator for hanging pieces - red for active player (danger), green for opponent (opportunity)"""
+    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_player_piece: bool) -> None:
+        """Draw an indicator for hanging pieces - red for player (danger), green for opponent (opportunity)"""
         border_thickness = 4
 
-        # Choose color based on whether it's the active player's piece or opponent's
-        if is_active_player:
+        # Choose color based on whether it's the player's piece or opponent's piece
+        if is_player_piece:
             indicator_color = Colors.ANNOTATION_WARNING  # Red for player's hanging pieces (danger)
         else:
             indicator_color = Colors.ANNOTATION_POSITIVE  # Green for opponent's hanging pieces (opportunity)
@@ -335,9 +335,11 @@ class ChessDisplay:
                 if self.is_help_option_enabled("hanging_pieces") and piece:
                     hanging_pieces = board_state.get_hanging_pieces(piece.color)
                     if (row, col) in hanging_pieces:
-                        # Determine if this piece belongs to the active player
-                        is_active_player = (piece.color == board_state.current_turn)
-                        self.draw_hanging_piece_indicator(screen, x, y, is_active_player)
+                        # Determine player color based on board orientation
+                        # Player = pieces on bottom (white when not flipped, black when flipped)
+                        player_color = Color.BLACK if is_board_flipped else Color.WHITE
+                        is_player_piece = (piece.color == player_color)
+                        self.draw_hanging_piece_indicator(screen, x, y, is_player_piece)
         
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
