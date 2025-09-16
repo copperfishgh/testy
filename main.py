@@ -65,6 +65,9 @@ last_hovered_square = None  # Track which board square mouse is over
 last_hover_was_legal = False  # Was the last hovered square a legal move?
 last_button_hover = False  # Track flip button hover state
 
+# Help panel state
+show_help_panel = False
+
 
 # Main game loop
 is_running = True
@@ -77,7 +80,11 @@ while is_running:
             is_running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                is_running = False
+                if show_help_panel:
+                    show_help_panel = False
+                    needs_redraw = True
+                else:
+                    is_running = False
             elif event.key == pygame.K_f:  # F key to flip board
                 is_board_flipped = not is_board_flipped
                 needs_redraw = True
@@ -110,6 +117,9 @@ while is_running:
                 needs_redraw = True
             elif event.key == pygame.K_e:  # E key to toggle exchange evaluation
                 display.toggle_help_option("exchange_evaluation")
+                needs_redraw = True
+            elif event.key == pygame.K_SLASH:  # Slash (/) key to show help
+                show_help_panel = not show_help_panel
                 needs_redraw = True
             elif event.key == pygame.K_BACKQUOTE:  # Tilde key (~) to reset game
                 board_state.reset_to_initial_position()
@@ -305,10 +315,14 @@ while is_running:
         pygame.draw.rect(screen, Colors.RGB_BLACK, flip_button_rect, 2)  # Border
 
         # Draw button text
-        button_text = "Flip (f)"
+        button_text = "Flip"
         text_surface = font.render(button_text, True, Colors.BUTTON_TEXT_COLOR)
         text_rect = text_surface.get_rect(center=flip_button_rect.center)
         screen.blit(text_surface, text_rect)
+
+        # Draw help panel if requested
+        if show_help_panel:
+            display.draw_keyboard_shortcuts_panel(screen)
 
         # Update the display
         pygame.display.flip()

@@ -70,8 +70,8 @@ class ChessDisplay:
         # Help options - load from settings file if available
         self.settings_file = ".testy"
         self.help_options = [
-            {"name": "Hanging Pieces (h)", "key": "hanging_pieces", "enabled": False},
-            {"name": "Exchange Evaluation (e)", "key": "exchange_evaluation", "enabled": False}
+            {"name": "Hanging Pieces", "key": "hanging_pieces", "enabled": False},
+            {"name": "Exchange Evaluation", "key": "exchange_evaluation", "enabled": False}
         ]
         self._load_settings()
 
@@ -633,6 +633,98 @@ class ChessDisplay:
 
         # Draw main red text
         screen.blit(rotated_surface, rotated_rect)
+
+    def draw_keyboard_shortcuts_panel(self, screen) -> None:
+        """Draw a centered panel showing all keyboard shortcuts with dynamic sizing"""
+        # Define shortcuts
+        shortcuts = [
+            ("F", "Flip board"),
+            ("U", "Undo move"),
+            ("R", "Redo move"),
+            ("H", "Toggle hanging pieces"),
+            ("E", "Toggle exchange evaluation"),
+            ("~", "Reset game"),
+            ("/", "Show/hide this help"),
+            ("Esc", "Exit game")
+        ]
+
+        # Calculate text dimensions
+        title_text = "Keyboard Shortcuts"
+        title_surface = self.font_large.render(title_text, True, Colors.BLACK_TEXT)
+        title_width, title_height = title_surface.get_size()
+
+        instruction_text = "Press / again to close"
+        instruction_surface = self.font_small.render(instruction_text, True, Colors.LABEL_TEXT_COLOR)
+        instruction_width, instruction_height = instruction_surface.get_size()
+
+        # Calculate maximum width needed for shortcuts
+        max_shortcut_width = 0
+        shortcut_heights = []
+        for key, description in shortcuts:
+            key_surface = self.font_medium.render(f"{key}:", True, Colors.RGB_BLACK)
+            desc_surface = self.font_small.render(description, True, Colors.LABEL_TEXT_COLOR)
+
+            # Calculate combined width (key + gap + description)
+            combined_width = key_surface.get_width() + 20 + desc_surface.get_width()  # 20px gap
+            max_shortcut_width = max(max_shortcut_width, combined_width)
+
+            # Use the taller of the two fonts for line height
+            line_height = max(key_surface.get_height(), desc_surface.get_height())
+            shortcut_heights.append(line_height)
+
+        # Calculate panel dimensions with padding
+        padding = 40
+        internal_padding = 20
+
+        panel_content_width = max(title_width, max_shortcut_width, instruction_width)
+        panel_width = panel_content_width + 2 * padding
+
+        # Calculate height: title + gap + shortcuts + gap + instruction + padding
+        shortcuts_total_height = sum(shortcut_heights) + (len(shortcuts) - 1) * 5  # 5px between lines
+        panel_height = title_height + internal_padding + shortcuts_total_height + internal_padding + instruction_height + 2 * padding
+
+        # Center the panel
+        panel_x = (self.window_width - panel_width) // 2
+        panel_y = (self.window_height - panel_height) // 2
+
+        # Create semi-transparent background overlay
+        overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))  # Semi-transparent black
+        screen.blit(overlay, (0, 0))
+
+        # Draw panel background
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        pygame.draw.rect(screen, Colors.HELP_PANEL_BACKGROUND, panel_rect)
+        pygame.draw.rect(screen, Colors.RGB_BLACK, panel_rect, 3)  # Thicker border
+
+        # Draw title (centered)
+        title_rect = title_surface.get_rect(center=(panel_x + panel_width // 2, panel_y + padding + title_height // 2))
+        screen.blit(title_surface, title_rect)
+
+        # Draw shortcuts
+        current_y = panel_y + padding + title_height + internal_padding
+
+        for i, (key, description) in enumerate(shortcuts):
+            # Render text
+            key_surface = self.font_medium.render(f"{key}:", True, Colors.RGB_BLACK)
+            desc_surface = self.font_small.render(description, True, Colors.LABEL_TEXT_COLOR)
+
+            # Position key text
+            key_x = panel_x + padding
+            key_y = current_y
+            screen.blit(key_surface, (key_x, key_y))
+
+            # Position description text (aligned to baseline of key text)
+            desc_x = key_x + key_surface.get_width() + 20  # 20px gap
+            desc_y = key_y + (key_surface.get_height() - desc_surface.get_height()) // 2  # Center vertically
+            screen.blit(desc_surface, (desc_x, desc_y))
+
+            # Move to next line
+            current_y += shortcut_heights[i] + 5  # 5px spacing between lines
+
+        # Draw instructions at bottom (centered)
+        instruction_rect = instruction_surface.get_rect(center=(panel_x + panel_width // 2, panel_y + panel_height - padding - instruction_height // 2))
+        screen.blit(instruction_surface, instruction_rect)
 
     def show_promotion_dialog(self, screen, color: Color) -> PieceType:
         """Show promotion dialog and return selected piece type"""
