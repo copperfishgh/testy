@@ -68,7 +68,7 @@ python main.py
 **Visual Features:**
 - **Drag-and-Drop Movement** - Smooth piece dragging with automatic square snapping
 - **Last Move Highlighting** - Green overlay on from/to squares (lichess-style)
-- **Material-Weighted Indicators** - Border thickness reflects piece value (2-8px)
+- **Consistent Visual Indicators** - Clear 4px borders for all hanging pieces
 - **Exchange Analysis** - Yellow triangles mark capturable pieces, orange highlights show attackers/defenders
 - **Move Preview** - Real-time tactical analysis when dragging over legal moves
 - **Dynamic Help Panel** - Press / for pixel-perfect auto-sized keyboard shortcuts overlay
@@ -119,9 +119,9 @@ Testy separates chess analysis into two distinct helper categories with **granul
 **Visual annotations directly on the chess board:**
 
 **Hanging Pieces (Implemented):**
-- Material-weighted visual indicators with border thickness showing piece value
+- Clear visual indicators with consistent border thickness for all pieces
 - Red borders for your hanging pieces (danger), green for opponent's (opportunity)
-- Border thickness scales with piece value: pawn=2px, knight/bishop=4px, rook=6px, queen=8px
+- Consistent 4px border thickness - piece value is obvious from the piece itself
 - Player-perspective colors that work correctly with board flipping
 
 **Exchange Evaluation (Implemented):**

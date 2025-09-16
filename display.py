@@ -234,8 +234,8 @@ class ChessDisplay:
         """Draw the pre-created move indicator at specified position"""
         screen.blit(self.move_indicator, (x, y))
 
-    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_player_piece: bool, piece_value: int = 1) -> None:
-        """Draw a material-weighted indicator with thickness indicating piece value"""
+    def draw_hanging_piece_indicator(self, screen, x: int, y: int, is_player_piece: bool) -> None:
+        """Draw a hanging piece indicator with consistent border thickness"""
 
         # Simple, clear colors
         if is_player_piece:
@@ -243,11 +243,8 @@ class ChessDisplay:
         else:
             indicator_color = Colors.ANNOTATION_POSITIVE  # Green for opponent's hanging pieces (opportunity)
 
-        # Border thickness scales with piece value (2-8 pixel range)
-        max_value = 9  # Queen value
-        min_thickness = 2
-        max_thickness = 8
-        border_thickness = int(min_thickness + (piece_value / max_value) * (max_thickness - min_thickness))
+        # Use same border thickness as orange highlights for consistency
+        border_thickness = 4
 
         # Draw border on all four edges
         border_rect = pygame.Rect(x, y, self.square_size, self.square_size)
@@ -360,8 +357,7 @@ class ChessDisplay:
                             # Player = pieces on bottom (white when not flipped, black when flipped)
                             player_color = Color.BLACK if is_board_flipped else Color.WHITE
                             is_player_piece = (evaluation_piece.color == player_color)
-                            piece_value = evaluation_piece.get_value()
-                            self.draw_hanging_piece_indicator(screen, x, y, is_player_piece, piece_value)
+                            self.draw_hanging_piece_indicator(screen, x, y, is_player_piece)
 
                 # Draw exchange evaluation indicator if enabled
                 if self.is_help_option_enabled("exchange_evaluation"):

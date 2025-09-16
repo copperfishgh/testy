@@ -418,39 +418,6 @@ class BoardState:
 
         return attackers
 
-    def get_all_attackers_and_defenders(self, target_row: int, target_col: int) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
-        """
-        Get all pieces that can attack or defend a given square.
-        Returns (attackers, defenders) where:
-        - attackers: list of (row, col) positions of pieces that can attack the square
-        - defenders: list of (row, col) positions of pieces that can defend the square
-
-        For exchange evaluation: attackers want to capture something on this square,
-        defenders want to protect something on this square.
-        """
-        target_piece = self.get_piece(target_row, target_col)
-
-        if target_piece is None:
-            # Empty square - anyone can attack it, but no one defends it
-            white_attackers = self._get_attackers(target_row, target_col, Color.WHITE)
-            black_attackers = self._get_attackers(target_row, target_col, Color.BLACK)
-            return (white_attackers + black_attackers, [])
-
-        # Square contains a piece - figure out who attacks and who defends
-        target_color = target_piece.color
-
-        # Attackers are enemy pieces that can capture the target
-        if target_color == Color.WHITE:
-            attackers = self._get_attackers(target_row, target_col, Color.BLACK)
-            defenders = self._get_attackers(target_row, target_col, Color.WHITE)
-        else:
-            attackers = self._get_attackers(target_row, target_col, Color.WHITE)
-            defenders = self._get_attackers(target_row, target_col, Color.BLACK)
-
-        # Remove the target piece itself from defenders (a piece can't defend itself)
-        defenders = [pos for pos in defenders if pos != (target_row, target_col)]
-
-        return (attackers, defenders)
 
     def get_tactically_interesting_squares(self) -> List[Tuple[int, int]]:
         """

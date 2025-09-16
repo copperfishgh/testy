@@ -1,6 +1,5 @@
 import pygame
 import sys
-import os
 from chess_board import BoardState
 from display import ChessDisplay
 from config import GameConfig, Colors
@@ -183,7 +182,7 @@ while is_running:
                                         square[0], square[1], promotion_piece
                                     )
                                     if not move_successful:
-                                        print("Promotion move failed!")
+                                        sound_manager.play_error_sound()
                                 else:
                                     # Execute regular move
                                     move_successful = board_state.make_move(
@@ -191,7 +190,7 @@ while is_running:
                                         square[0], square[1]
                                     )
                                     if not move_successful:
-                                        print("Move failed!")  # This shouldn't happen if move validation works
+                                        sound_manager.play_error_sound()
 
                                 # Clear selection regardless
                                 selected_square_coords = None
