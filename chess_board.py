@@ -152,6 +152,11 @@ class BoardState:
     _cached_hanging_pieces_white: List[Tuple[int, int]] = field(default_factory=list)
     _cached_hanging_pieces_black: List[Tuple[int, int]] = field(default_factory=list)
     _hanging_pieces_cache_valid: bool = False
+
+    # Cached exchange evaluation data (updated only when board changes)
+    _cached_interesting_squares: List[Tuple[int, int]] = field(default_factory=list)
+    _cached_attackers_defenders: dict = field(default_factory=dict)  # {(row,col): (attackers, defenders)}
+    _exchange_cache_valid: bool = False
     
     def __post_init__(self):
         """Initialize the board with starting position"""
@@ -220,6 +225,11 @@ class BoardState:
         self._cached_hanging_pieces_white = []
         self._cached_hanging_pieces_black = []
         self._hanging_pieces_cache_valid = False
+
+        # Invalidate exchange evaluation cache
+        self._cached_interesting_squares = []
+        self._cached_attackers_defenders = {}
+        self._exchange_cache_valid = False
 
     def get_piece(self, row: int, col: int) -> Optional[Piece]:
         """Get piece at a specific position"""
@@ -371,6 +381,8 @@ class BoardState:
     def _invalidate_hanging_pieces_cache(self) -> None:
         """Invalidate the hanging pieces cache (call when board changes)"""
         self._hanging_pieces_cache_valid = False
+        # Also invalidate exchange evaluation cache since they depend on similar data
+        self._exchange_cache_valid = False
 
     def _is_piece_hanging_simple(self, row: int, col: int) -> bool:
         """Simple check: is piece attacked but not defended?"""
@@ -405,6 +417,117 @@ class BoardState:
                         attackers.append((row, col))
 
         return attackers
+
+    def get_all_attackers_and_defenders(self, target_row: int, target_col: int) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+        """
+        Get all pieces that can attack or defend a given square.
+        Returns (attackers, defenders) where:
+        - attackers: list of (row, col) positions of pieces that can attack the square
+        - defenders: list of (row, col) positions of pieces that can defend the square
+
+        For exchange evaluation: attackers want to capture something on this square,
+        defenders want to protect something on this square.
+        """
+        target_piece = self.get_piece(target_row, target_col)
+
+        if target_piece is None:
+            # Empty square - anyone can attack it, but no one defends it
+            white_attackers = self._get_attackers(target_row, target_col, Color.WHITE)
+            black_attackers = self._get_attackers(target_row, target_col, Color.BLACK)
+            return (white_attackers + black_attackers, [])
+
+        # Square contains a piece - figure out who attacks and who defends
+        target_color = target_piece.color
+
+        # Attackers are enemy pieces that can capture the target
+        if target_color == Color.WHITE:
+            attackers = self._get_attackers(target_row, target_col, Color.BLACK)
+            defenders = self._get_attackers(target_row, target_col, Color.WHITE)
+        else:
+            attackers = self._get_attackers(target_row, target_col, Color.WHITE)
+            defenders = self._get_attackers(target_row, target_col, Color.BLACK)
+
+        # Remove the target piece itself from defenders (a piece can't defend itself)
+        defenders = [pos for pos in defenders if pos != (target_row, target_col)]
+
+        return (attackers, defenders)
+
+    def get_tactically_interesting_squares(self) -> List[Tuple[int, int]]:
+        """
+        Get all squares that have tactical potential for exchange evaluation.
+        Returns cached results for performance.
+        """
+        if not self._exchange_cache_valid:
+            self._update_exchange_cache()
+        return self._cached_interesting_squares.copy()
+
+    def _update_exchange_cache(self) -> None:
+        """Update the cached exchange evaluation data"""
+        self._cached_interesting_squares = []
+        self._cached_attackers_defenders = {}
+
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece(row, col)
+                if piece is not None:
+                    # Only compute for squares that have pieces
+                    attackers, defenders = self._compute_attackers_defenders(row, col)
+                    self._cached_attackers_defenders[(row, col)] = (attackers, defenders)
+
+                    # Check if this square is tactically interesting
+                    if len(attackers) > 0:
+                        self._cached_interesting_squares.append((row, col))
+
+        self._exchange_cache_valid = True
+
+    def _compute_attackers_defenders(self, target_row: int, target_col: int) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+        """Compute attackers and defenders without caching (internal use)"""
+        target_piece = self.get_piece(target_row, target_col)
+
+        if target_piece is None:
+            # Empty square - anyone can attack it, but no one defends it
+            white_attackers = self._get_attackers(target_row, target_col, Color.WHITE)
+            black_attackers = self._get_attackers(target_row, target_col, Color.BLACK)
+            return (white_attackers + black_attackers, [])
+
+        # Square contains a piece - figure out who attacks and who defends
+        target_color = target_piece.color
+
+        # Attackers are enemy pieces that can capture the target
+        if target_color == Color.WHITE:
+            attackers = self._get_attackers(target_row, target_col, Color.BLACK)
+            # Defenders: friendly pieces that could recapture if this piece is taken
+            defenders = self._get_attackers_if_empty(target_row, target_col, Color.WHITE)
+        else:
+            attackers = self._get_attackers(target_row, target_col, Color.WHITE)
+            # Defenders: friendly pieces that could recapture if this piece is taken
+            defenders = self._get_attackers_if_empty(target_row, target_col, Color.BLACK)
+
+        # Remove the target piece itself from defenders (a piece can't defend itself)
+        defenders = [pos for pos in defenders if pos != (target_row, target_col)]
+
+        return (attackers, defenders)
+
+    def _get_attackers_if_empty(self, target_row: int, target_col: int, attacker_color: Color) -> List[Tuple[int, int]]:
+        """Get all pieces that could attack this square if it were empty (for defender calculation)"""
+        # Temporarily remove the piece, find attackers, then restore
+        original_piece = self.get_piece(target_row, target_col)
+        self.set_piece(target_row, target_col, None)  # Temporarily empty the square
+
+        attackers = self._get_attackers(target_row, target_col, attacker_color)
+
+        self.set_piece(target_row, target_col, original_piece)  # Restore original piece
+        return attackers
+
+    def get_all_attackers_and_defenders(self, target_row: int, target_col: int) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+        """
+        Get all pieces that can attack or defend a given square.
+        Returns cached results for performance.
+        """
+        if not self._exchange_cache_valid:
+            self._update_exchange_cache()
+
+        return self._cached_attackers_defenders.get((target_row, target_col), ([], []))
 
     def _get_piece_attacks(self, row: int, col: int) -> List[Tuple[int, int]]:
         """Get all squares this piece attacks (not filtered by check legality)"""

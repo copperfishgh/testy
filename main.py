@@ -108,6 +108,9 @@ while is_running:
             elif event.key == pygame.K_h:  # H key to toggle hanging pieces
                 display.toggle_help_option("hanging_pieces")
                 needs_redraw = True
+            elif event.key == pygame.K_e:  # E key to toggle exchange evaluation
+                display.toggle_help_option("exchange_evaluation")
+                needs_redraw = True
             elif event.key == pygame.K_BACKQUOTE:  # Tilde key (~) to reset game
                 board_state.reset_to_initial_position()
                 # Clear any current selection and highlights
@@ -289,7 +292,8 @@ while is_running:
     # Only redraw if something changed
     if needs_redraw:
         # Draw the chess board (with flip consideration)
-        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state, dragging_piece, drag_origin)
+        current_mouse_pos = pygame.mouse.get_pos()
+        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state, dragging_piece, drag_origin, current_mouse_pos)
 
         # Draw dragged piece snapped to square center
         if dragging_piece:

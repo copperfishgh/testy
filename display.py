@@ -70,7 +70,8 @@ class ChessDisplay:
         # Help options - load from settings file if available
         self.settings_file = ".testy"
         self.help_options = [
-            {"name": "Hanging Pieces (h)", "key": "hanging_pieces", "enabled": False}
+            {"name": "Hanging Pieces (h)", "key": "hanging_pieces", "enabled": False},
+            {"name": "Exchange Evaluation (e)", "key": "exchange_evaluation", "enabled": False}
         ]
         self._load_settings()
 
@@ -302,7 +303,8 @@ class ChessDisplay:
 
     def draw_board(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
                    highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False,
-                   preview_board_state: Optional[BoardState] = None, dragging_piece=None, drag_origin=None) -> None:
+                   preview_board_state: Optional[BoardState] = None, dragging_piece=None, drag_origin=None,
+                   mouse_pos: Optional[Tuple[int, int]] = None) -> None:
         """Draw the chess board with pieces"""
         if highlighted_moves is None:
             highlighted_moves = []
@@ -360,7 +362,29 @@ class ChessDisplay:
                             is_player_piece = (evaluation_piece.color == player_color)
                             piece_value = evaluation_piece.get_value()
                             self.draw_hanging_piece_indicator(screen, x, y, is_player_piece, piece_value)
-        
+
+                # Draw exchange evaluation indicator if enabled
+                if self.is_help_option_enabled("exchange_evaluation"):
+                    # Use preview board state for helper evaluation if available
+                    evaluation_board = preview_board_state if preview_board_state else board_state
+
+                    # Get list of tactically interesting squares
+                    interesting_squares = evaluation_board.get_tactically_interesting_squares()
+                    if (row, col) in interesting_squares:
+                        self.draw_exchange_indicator(screen, x, y)
+
+        # Draw exchange evaluation piece highlights (orange borders) if hovering
+        if mouse_pos:
+            evaluation_board = preview_board_state if preview_board_state else board_state
+            highlight_positions = self.get_exchange_highlights(mouse_pos, evaluation_board, is_board_flipped)
+
+            for highlight_row, highlight_col in highlight_positions:
+                # Convert board coordinates to display coordinates
+                display_pos = self.get_square_display_position(highlight_row, highlight_col, is_board_flipped)
+                if display_pos:
+                    x, y = display_pos
+                    self.draw_piece_highlight(screen, x, y)
+
         # Draw board border (use actual board size based on squares)
         actual_board_size = self.square_size * 8
         border_rect = pygame.Rect(self.board_margin_x - 2, self.board_margin_y - 2,
@@ -453,7 +477,61 @@ class ChessDisplay:
         
         text_surface = font.render(text, True, color)
         screen.blit(text_surface, (x, y))
-    
+
+    def draw_exchange_indicator(self, screen, x: int, y: int) -> None:
+        """Draw a subtle indicator for squares with exchange potential"""
+        # Small colored corner indicators to mark tactical squares
+        corner_size = 8
+        indicator_color = Colors.ANNOTATION_CAUTION  # Yellow for tactical awareness
+
+        # Draw small triangle in the top-right corner
+        triangle_points = [
+            (x + self.square_size - corner_size, y),
+            (x + self.square_size, y),
+            (x + self.square_size, y + corner_size)
+        ]
+        pygame.draw.polygon(screen, indicator_color, triangle_points)
+
+    def draw_piece_highlight(self, screen, x: int, y: int) -> None:
+        """Draw orange highlighting around a piece (for attacker/defender display)"""
+        # Draw a thick orange border around the piece
+        border_thickness = 4
+        highlight_color = (255, 165, 0)  # Orange color
+
+        # Draw border around the entire square
+        border_rect = pygame.Rect(x, y, self.square_size, self.square_size)
+        pygame.draw.rect(screen, highlight_color, border_rect, border_thickness)
+
+    def get_exchange_highlights(self, mouse_pos: Tuple[int, int], board_state, is_board_flipped: bool = False) -> List[Tuple[int, int]]:
+        """
+        Get list of piece positions to highlight based on mouse hover over tactical squares.
+        Returns list of (row, col) positions that should be highlighted in orange.
+        """
+        if not self.is_help_option_enabled("exchange_evaluation"):
+            return []
+
+        # Check if mouse is over a tactically interesting square
+        hovered_square = self.get_square_from_mouse(mouse_pos)
+        if not hovered_square:
+            return []
+
+        # Convert display coordinates to board coordinates if flipped
+        if is_board_flipped:
+            board_square = (7 - hovered_square[0], 7 - hovered_square[1])
+        else:
+            board_square = hovered_square
+
+        # Check if this square is tactically interesting
+        interesting_squares = board_state.get_tactically_interesting_squares()
+        if board_square not in interesting_squares:
+            return []
+
+        # Get all attackers and defenders for this square
+        attackers, defenders = board_state.get_all_attackers_and_defenders(board_square[0], board_square[1])
+
+        # Return all positions that should be highlighted
+        return attackers + defenders
+
     def get_square_display_position(self, row: int, col: int, is_board_flipped: bool = False) -> Optional[Tuple[int, int]]:
         """Get the display position (x, y) of a board square"""
         # Apply board flipping for display coordinates
@@ -483,7 +561,8 @@ class ChessDisplay:
     
     def update_display(self, screen, board_state: BoardState, selected_square_coords: Optional[Tuple[int, int]] = None,
                       highlighted_moves: List[Tuple[int, int]] = None, is_board_flipped: bool = False,
-                      preview_board_state: Optional[BoardState] = None, dragging_piece=None, drag_origin=None) -> None:
+                      preview_board_state: Optional[BoardState] = None, dragging_piece=None, drag_origin=None,
+                      mouse_pos: Optional[Tuple[int, int]] = None) -> None:
         """Update the entire display"""
         # Check for checkmate and start animation if needed
         if board_state.is_in_checkmate and self.checkmate_animation_start_time is None:
@@ -497,7 +576,7 @@ class ChessDisplay:
         screen.fill(self.RGB_WHITE)
 
         # Draw all components
-        self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state, dragging_piece, drag_origin)
+        self.draw_board(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state, dragging_piece, drag_origin, mouse_pos)
         self.draw_help_panel(screen)
 
         # Draw stalemate overlay if needed
