@@ -37,8 +37,10 @@ Chess has two main components: **tactical accuracy** (not hanging pieces) and **
 
 **Latest Features:**
 - Material-weighted hanging pieces system with value-based visual indicators
+- Exchange evaluation system with hover-based tactical analysis
 - Move preview system showing tactical consequences before committing
 - Lichess-style last move highlighting for turn indication
+- Dynamic keyboard shortcuts help panel with precise auto-sizing
 - Persistent settings system for user preferences
 
 **Still Needed for Full Testy Vision:**
@@ -53,18 +55,23 @@ python main.py
 ```
 
 **Controls:**
-- **Mouse** - Drag and drop pieces with square snapping, hover over legal moves for preview
+- **Mouse** - Drag and drop pieces with square snapping, hover over pieces for tactical analysis
 - **F** - Flip board perspective
 - **U** - Undo last move
 - **R** - Redo move
 - **H** - Toggle hanging pieces helper
-- **ESC** - Quit
+- **E** - Toggle exchange evaluation helper
+- **~** - Reset game to starting position
+- **/** - Show/hide keyboard shortcuts help panel
+- **ESC** - Exit game (or close help panel if open)
 
 **Visual Features:**
 - **Drag-and-Drop Movement** - Smooth piece dragging with automatic square snapping
 - **Last Move Highlighting** - Green overlay on from/to squares (lichess-style)
 - **Material-Weighted Indicators** - Border thickness reflects piece value (2-8px)
+- **Exchange Analysis** - Yellow triangles mark capturable pieces, orange highlights show attackers/defenders
 - **Move Preview** - Real-time tactical analysis when dragging over legal moves
+- **Dynamic Help Panel** - Press / for pixel-perfect auto-sized keyboard shortcuts overlay
 - **Performance Optimized** - Annotations only compute when entering different legal squares
 - **Persistent Settings** - Helper preferences saved between sessions
 
@@ -92,18 +99,18 @@ Testy separates chess analysis into two distinct helper categories with **granul
 ┌─────────────────┬─────────────────────┐
 │                 │ TACTICAL HELPERS    │
 │                 │ ☑ Hanging Pieces    │
-│                 │ ☐ Immediate Threats │
-│   CHESS BOARD   │ ☐ Simple Forks      │
+│                 │ ☑ Exchange Evaluation│
+│   CHESS BOARD   │ ☐ Immediate Threats │
+│                 │ ☐ Simple Forks      │
 │                 │ ☐ Pins & Skewers    │
 │                 │ ☐ Material Wins     │
 │                 │                     │
 │                 │ STRATEGIC HELPERS   │
 │                 │ ☐ Weak Pawns        │
-│                 │ ☐ Open Files        │
-│─────────────────│ ☐ Outpost Squares   │
-│ [Flip Board]    │ ☐ Pawn Breaks       │
-│                 │ ☐ Passed Pawns      │
-│ Strategic Text: │                     │
+│─────────────────│ ☐ Open Files        │
+│ [Flip]    [/?]  │ ☐ Outpost Squares   │
+│                 │ ☐ Pawn Breaks       │
+│ Strategic Text: │ ☐ Passed Pawns      │
 │ • Analysis here │                     │
 └─────────────────┴─────────────────────┘
 ```
@@ -116,6 +123,13 @@ Testy separates chess analysis into two distinct helper categories with **granul
 - Red borders for your hanging pieces (danger), green for opponent's (opportunity)
 - Border thickness scales with piece value: pawn=2px, knight/bishop=4px, rook=6px, queen=8px
 - Player-perspective colors that work correctly with board flipping
+
+**Exchange Evaluation (Implemented):**
+- Yellow triangle indicators mark tactically interesting pieces that can be captured
+- Hover investigation shows orange highlighting of all attacking and defending pieces
+- Human-evaluated tactical analysis without computer calculation
+- High-performance caching system prevents lag during mouse movement
+- Integrated with hanging pieces system for complete tactical awareness
 
 **Future Tactical Helpers:**
 - **Immediate Threats** - Warning symbols for mate in 1, checks
