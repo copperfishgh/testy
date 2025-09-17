@@ -157,6 +157,11 @@ class BoardState:
     _cached_interesting_squares: List[Tuple[int, int]] = field(default_factory=list)
     _cached_attackers_defenders: dict = field(default_factory=dict)  # {(row,col): (attackers, defenders)}
     _exchange_cache_valid: bool = False
+
+    # Cached knight fork data (updated only when board changes)
+    _cached_knight_fork_squares_white: List[Tuple[int, int]] = field(default_factory=list)  # Squares where white knights can fork
+    _cached_knight_fork_squares_black: List[Tuple[int, int]] = field(default_factory=list)  # Squares where black knights can fork
+    _knight_fork_cache_valid: bool = False
     
     def __post_init__(self):
         """Initialize the board with starting position"""
@@ -230,6 +235,11 @@ class BoardState:
         self._cached_interesting_squares = []
         self._cached_attackers_defenders = {}
         self._exchange_cache_valid = False
+
+        # Invalidate knight fork cache
+        self._cached_knight_fork_squares_white = []
+        self._cached_knight_fork_squares_black = []
+        self._knight_fork_cache_valid = False
 
     def get_piece(self, row: int, col: int) -> Optional[Piece]:
         """Get piece at a specific position"""
@@ -383,6 +393,8 @@ class BoardState:
         self._hanging_pieces_cache_valid = False
         # Also invalidate exchange evaluation cache since they depend on similar data
         self._exchange_cache_valid = False
+        # Also invalidate knight fork cache since it depends on board state
+        self._knight_fork_cache_valid = False
 
     def _is_piece_hanging_simple(self, row: int, col: int) -> bool:
         """Simple check: is piece attacked but not defended?"""
@@ -559,6 +571,84 @@ class BoardState:
         }
 
         return values.get(piece.type, 0)
+
+    def get_knight_fork_squares(self, color: Color) -> List[Tuple[int, int]]:
+        """Get list of squares where knights of the given color can create forks. Uses caching for performance."""
+        if not self._knight_fork_cache_valid:
+            self._update_knight_fork_cache()
+
+        if color == Color.WHITE:
+            return self._cached_knight_fork_squares_white.copy()
+        else:
+            return self._cached_knight_fork_squares_black.copy()
+
+    def _update_knight_fork_cache(self) -> None:
+        """Update the cached knight fork squares for both colors"""
+        self._cached_knight_fork_squares_white = []
+        self._cached_knight_fork_squares_black = []
+
+        # Check if each side has any knights remaining
+        white_has_knights = self._player_has_knights(Color.WHITE)
+        black_has_knights = self._player_has_knights(Color.BLACK)
+
+        # Skip fork detection entirely if no knights exist for that color
+        if not white_has_knights and not black_has_knights:
+            self._knight_fork_cache_valid = True
+            return
+
+        # Check all squares on the board for potential knight fork opportunities
+        for row in range(8):
+            for col in range(8):
+                # Only check white fork opportunities if white has knights
+                if white_has_knights and self._would_knight_fork_from_square(row, col, Color.WHITE):
+                    # Only add if it's a legal square for a white knight (empty or enemy piece)
+                    piece = self.get_piece(row, col)
+                    if piece is None or piece.color == Color.BLACK:
+                        self._cached_knight_fork_squares_white.append((row, col))
+
+                # Only check black fork opportunities if black has knights
+                if black_has_knights and self._would_knight_fork_from_square(row, col, Color.BLACK):
+                    # Only add if it's a legal square for a black knight (empty or enemy piece)
+                    piece = self.get_piece(row, col)
+                    if piece is None or piece.color == Color.WHITE:
+                        self._cached_knight_fork_squares_black.append((row, col))
+
+        self._knight_fork_cache_valid = True
+
+    def _player_has_knights(self, color: Color) -> bool:
+        """Check if a player has any knights remaining on the board"""
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece(row, col)
+                if piece and piece.color == color and piece.type == PieceType.KNIGHT:
+                    return True
+        return False
+
+    def _would_knight_fork_from_square(self, knight_row: int, knight_col: int, knight_color: Color) -> bool:
+        """Check if a knight on the given square would create a fork (attack 2+ enemy pieces)"""
+        enemy_color = Color.BLACK if knight_color == Color.WHITE else Color.WHITE
+
+        # Get all squares this knight would attack from this position
+        knight_attacks = []
+        knight_moves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+
+        for dr, dc in knight_moves:
+            attack_row, attack_col = knight_row + dr, knight_col + dc
+            if self._is_valid_square(attack_row, attack_col):
+                knight_attacks.append((attack_row, attack_col))
+
+        # Count how many high-value enemy pieces would be attacked (king, queen, rook only)
+        attacked_enemy_pieces = 0
+        high_value_pieces = {PieceType.KING, PieceType.QUEEN, PieceType.ROOK}
+
+        for attack_row, attack_col in knight_attacks:
+            piece = self.get_piece(attack_row, attack_col)
+            if piece and piece.color == enemy_color and piece.type in high_value_pieces:
+                attacked_enemy_pieces += 1
+
+        # A fork requires attacking at least 2 high-value enemy pieces
+        return attacked_enemy_pieces >= 2
+
 
     def get_fen_position(self) -> str:
         """Generate FEN (Forsyth-Edwards Notation) string for the current position"""

@@ -72,6 +72,7 @@ class ChessDisplay:
         self.help_options = [
             {"name": "Hanging Pieces", "key": "hanging_pieces", "enabled": False},
             {"name": "Exchange Evaluation", "key": "exchange_evaluation", "enabled": False},
+            {"name": "Knight Forks", "key": "knight_forks", "enabled": False},
             {"name": "Flip Board", "key": "flip_board", "enabled": False}
         ]
         self._load_settings()
@@ -365,6 +366,24 @@ class ChessDisplay:
                     if (row, col) in interesting_squares:
                         self.draw_exchange_indicator(screen, x, y)
 
+                # Draw knight fork indicator if enabled
+                if self.is_help_option_enabled("knight_forks"):
+                    # Use preview board state for helper evaluation if available
+                    evaluation_board = preview_board_state if preview_board_state else board_state
+
+                    # Determine player color based on board orientation
+                    player_color = Color.BLACK if is_board_flipped else Color.WHITE
+                    opponent_color = Color.WHITE if is_board_flipped else Color.BLACK
+
+                    # Check both player and opponent fork opportunities
+                    player_fork_squares = evaluation_board.get_knight_fork_squares(player_color)
+                    opponent_fork_squares = evaluation_board.get_knight_fork_squares(opponent_color)
+
+                    if (row, col) in player_fork_squares:
+                        self.draw_knight_fork_indicator(screen, x, y, is_player_opportunity=True)
+                    elif (row, col) in opponent_fork_squares:
+                        self.draw_knight_fork_indicator(screen, x, y, is_player_opportunity=False)
+
         # Draw exchange evaluation piece highlights (orange borders) if hovering
         if mouse_pos:
             evaluation_board = preview_board_state if preview_board_state else board_state
@@ -483,6 +502,29 @@ class ChessDisplay:
             (x + self.square_size, y + corner_size)
         ]
         pygame.draw.polygon(screen, indicator_color, triangle_points)
+
+    def draw_knight_fork_indicator(self, screen, x: int, y: int, is_player_opportunity: bool = True) -> None:
+        """Draw a knight fork opportunity indicator"""
+        # Use same color scheme as hanging pieces for consistency
+        if is_player_opportunity:
+            indicator_color = Colors.ANNOTATION_POSITIVE  # Green for player opportunities
+        else:
+            indicator_color = Colors.ANNOTATION_WARNING   # Red for opponent threats
+
+        # Draw a small diamond in the center of the square
+        diamond_size = 8
+        center_x = x + self.square_size // 2
+        center_y = y + self.square_size // 2
+
+        # Diamond points (top, right, bottom, left)
+        diamond_points = [
+            (center_x, center_y - diamond_size),  # Top
+            (center_x + diamond_size, center_y),  # Right
+            (center_x, center_y + diamond_size),  # Bottom
+            (center_x - diamond_size, center_y)   # Left
+        ]
+
+        pygame.draw.polygon(screen, indicator_color, diamond_points)
 
     def draw_piece_highlight(self, screen, x: int, y: int) -> None:
         """Draw orange highlighting around a piece (for attacker/defender display)"""

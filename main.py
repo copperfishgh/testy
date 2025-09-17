@@ -75,7 +75,7 @@ while is_running:
                     needs_redraw = True
                 else:
                     is_running = False
-            elif event.key == pygame.K_f:  # F key to toggle flip board
+            elif event.key == pygame.K_b:  # B key to toggle flip board
                 display.toggle_help_option("flip_board")
                 needs_redraw = True
             elif event.key == pygame.K_u:  # U key to undo
@@ -107,6 +107,9 @@ while is_running:
                 needs_redraw = True
             elif event.key == pygame.K_e:  # E key to toggle exchange evaluation
                 display.toggle_help_option("exchange_evaluation")
+                needs_redraw = True
+            elif event.key == pygame.K_f:  # F key to toggle knight forks
+                display.toggle_help_option("knight_forks")
                 needs_redraw = True
             elif event.key == pygame.K_SLASH:  # Slash (/) key to show help
                 show_help_panel = not show_help_panel
