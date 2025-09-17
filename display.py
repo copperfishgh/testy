@@ -146,13 +146,8 @@ class ChessDisplay:
         pygame.draw.rect(screen, Colors.HELP_PANEL_BACKGROUND, panel_rect)
         pygame.draw.rect(screen, Colors.RGB_BLACK, panel_rect, 1)
 
-        # Draw title
-        title_text = self.font_medium.render("Helpers", True, Colors.BLACK_TEXT)
-        title_y = self.help_panel_y + 20
-        screen.blit(title_text, (self.help_panel_x + 10, title_y))
-
         # Draw checkboxes
-        current_y = title_y + 50
+        current_y = self.help_panel_y + 20
         for i, option in enumerate(self.help_options):
             self._draw_checkbox(screen, self.help_panel_x + 10, current_y, option)
             current_y += self.checkbox_spacing
