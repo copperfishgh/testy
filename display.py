@@ -68,7 +68,7 @@ class ChessDisplay:
         self.checkbox_spacing = int(window_height * GameConfig.CHECKBOX_SPACING_PERCENTAGE)
 
         # Help options - load from settings file if available
-        self.settings_file = ".testy"
+        self.settings_file = ".blundex"
         self.help_options = [
             {"name": "Hanging Pieces", "key": "hanging_pieces", "enabled": False},
             {"name": "Exchange Evaluation", "key": "exchange_evaluation", "enabled": False}
