@@ -2,17 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Overview
-
-Blundex is a Python chess tactical analysis application built with Pygame. It's designed as a real-time chess analysis tool that helps players avoid blunders and tactical oversights while focusing on strategic play. The project follows a modular architecture with clear separation between chess logic, display, and configuration.
-
-## Running the Application
+## Development Commands
 
 ```bash
-python main.py
+python main.py    # Run the application
 ```
 
-The application requires Python 3.x with Pygame. Optional dependencies include NumPy for sound generation.
+**Dependencies**: Python 3.x + Pygame (required), NumPy (optional for sound)
 
 ## Architecture
 
@@ -66,23 +62,11 @@ The `pngs/2x/` directory contains chess piece images in the format `{color}{piec
 - Pieces: `P` (pawn), `R` (rook), `N` (knight), `B` (bishop), `Q` (queen), `K` (king)
 - Example: `wK.png` (white king), `bQ.png` (black queen)
 
-### Game Controls
+### Helper System Implementation
 
-- **F** - Flip board perspective
-- **U/R** - Undo/Redo moves
-- **H** - Toggle hanging pieces helper
-- **E** - Toggle exchange evaluation helper
-- **~** - Reset game to starting position
-- **/** - Show/hide keyboard shortcuts panel
-- **ESC** - Exit application
-
-### Tactical Helper System
-
-The application features a checkbox-based helper system:
-- **Hanging Pieces**: Visual indicators for undefended pieces
-- **Exchange Evaluation**: Tactical analysis with hover-based investigation
-- Settings are persisted between sessions in `.blundex` file
-- Helpers use cached computation for performance optimization
+**Settings Persistence**: User preferences saved to `.blundex` JSON file
+**Performance**: Helpers use cached computation for tactical analysis
+**UI Integration**: Checkbox-based controls in right panel (`display.py:draw_help_panel`)
 
 ### Development Notes
 
@@ -92,10 +76,11 @@ The application features a checkbox-based helper system:
 - Memory-efficient with move history limits and caching systems
 - Optimized rendering with smart redraw detection
 
-### Future Architecture
+### Important Implementation Details
 
-The codebase is designed for eventual conversion to Rust for:
-- Single executable distribution
-- Improved performance for real-time analysis
-- Memory safety for chess engine calculations
-- Cross-platform deployment optimization
+**Caching Systems**: `BoardState._update_hanging_pieces_cache()` and `_update_exchange_cache()` for performance
+**Coordinate Systems**: Display coordinates vs board coordinates, with flipping logic in `display.py`
+**Event Handling**: Main game loop in `main.py` handles all input with smart redraw detection
+**State Management**: Comprehensive undo/redo system with deep copying in `chess_board.py`
+
+For user features and application overview, see [README.md](README.md).

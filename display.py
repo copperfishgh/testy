@@ -71,7 +71,8 @@ class ChessDisplay:
         self.settings_file = ".blundex"
         self.help_options = [
             {"name": "Hanging Pieces", "key": "hanging_pieces", "enabled": False},
-            {"name": "Exchange Evaluation", "key": "exchange_evaluation", "enabled": False}
+            {"name": "Exchange Evaluation", "key": "exchange_evaluation", "enabled": False},
+            {"name": "Flip Board", "key": "flip_board", "enabled": False}
         ]
         self._load_settings()
 

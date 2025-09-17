@@ -34,14 +34,7 @@ board_state = BoardState()
 # Create display object
 display = ChessDisplay(WINDOW_WIDTH, WINDOW_HEIGHT)
 
-# Button properties using config values
-button_width = int(WINDOW_WIDTH * GameConfig.BUTTON_WIDTH_PERCENTAGE)
-button_height = int(WINDOW_HEIGHT * GameConfig.BUTTON_HEIGHT_PERCENTAGE)
-button_x = (WINDOW_WIDTH - button_width) // 2  # Centered horizontally
-button_y = int(WINDOW_HEIGHT * GameConfig.BUTTON_Y_PERCENTAGE)
-flip_button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
-
-# Font setup using config values - modern system font
+# Font setup using config values - modern system font (for any UI text if needed)
 font_size = int(WINDOW_WIDTH * GameConfig.FONT_BUTTON_PERCENTAGE)
 try:
     font = pygame.font.SysFont('segoeui,arial,helvetica,sans-serif', font_size, bold=False)
@@ -49,7 +42,6 @@ except:
     font = pygame.font.Font(None, font_size)
 
 # Game state
-is_board_flipped = False
 selected_square_coords = None
 highlighted_moves = []
 
@@ -62,7 +54,6 @@ drag_origin = None     # Original square coordinates
 needs_redraw = True  # Initially need to draw
 last_hovered_square = None  # Track which board square mouse is over
 last_hover_was_legal = False  # Was the last hovered square a legal move?
-last_button_hover = False  # Track flip button hover state
 
 # Help panel state
 show_help_panel = False
@@ -84,8 +75,8 @@ while is_running:
                     needs_redraw = True
                 else:
                     is_running = False
-            elif event.key == pygame.K_f:  # F key to flip board
-                is_board_flipped = not is_board_flipped
+            elif event.key == pygame.K_f:  # F key to toggle flip board
+                display.toggle_help_option("flip_board")
                 needs_redraw = True
             elif event.key == pygame.K_u:  # U key to undo
                 if board_state.can_undo():
@@ -134,40 +125,35 @@ while is_running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             
-            # Check if flip button was clicked
-            if flip_button_rect.collidepoint(mouse_pos):
-                is_board_flipped = not is_board_flipped
+            # Check if a help checkbox was clicked
+            checkbox_key = display.get_checkbox_at_pos(mouse_pos)
+            if checkbox_key:
+                display.toggle_help_option(checkbox_key)
                 needs_redraw = True
             else:
-                # Check if a help checkbox was clicked
-                checkbox_key = display.get_checkbox_at_pos(mouse_pos)
-                if checkbox_key:
-                    display.toggle_help_option(checkbox_key)
-                    needs_redraw = True
-                else:
-                    # Handle board clicks for piece selection/movement
-                    square = display.get_square_from_mouse(mouse_pos)
-                    if square:
-                        # Convert square coordinates if board is flipped
-                        if is_board_flipped:
-                            square = (7 - square[0], 7 - square[1])
+                # Handle board clicks for piece selection/movement
+                square = display.get_square_from_mouse(mouse_pos)
+                if square:
+                    # Convert square coordinates if board is flipped
+                    if display.is_help_option_enabled("flip_board"):
+                        square = (7 - square[0], 7 - square[1])
 
-                        if selected_square_coords is None:
-                            # Start dragging a piece
-                            piece = board_state.get_piece(square[0], square[1])
-                            if piece and piece.color == board_state.current_turn:
-                                # Set up drag state
-                                dragging_piece = piece
-                                drag_origin = square
-                                selected_square_coords = square
+                    if selected_square_coords is None:
+                        # Start dragging a piece
+                        piece = board_state.get_piece(square[0], square[1])
+                        if piece and piece.color == board_state.current_turn:
+                            # Set up drag state
+                            dragging_piece = piece
+                            drag_origin = square
+                            selected_square_coords = square
 
-                                # Calculate possible moves for the selected piece
-                                highlighted_moves = board_state.get_possible_moves(square[0], square[1])
-                                # Reset hover state since highlighted_moves changed
-                                last_hovered_square = None
-                                last_hover_was_legal = False
-                                needs_redraw = True
-                        else:
+                            # Calculate possible moves for the selected piece
+                            highlighted_moves = board_state.get_possible_moves(square[0], square[1])
+                            # Reset hover state since highlighted_moves changed
+                            last_hovered_square = None
+                            last_hover_was_legal = False
+                            needs_redraw = True
+                    else:
                             # Try to move the piece
                             if square in highlighted_moves:
                                 # Check if this is a pawn promotion
@@ -225,7 +211,7 @@ while is_running:
 
                 if target_square:
                     # Convert square coordinates if board is flipped
-                    if is_board_flipped:
+                    if display.is_help_option_enabled("flip_board"):
                         target_square = (7 - target_square[0], 7 - target_square[1])
 
                     # Try to complete the move
@@ -260,7 +246,7 @@ while is_running:
 
     # Get current square under mouse
     current_hovered_square = display.get_square_from_mouse(current_mouse_pos)
-    if current_hovered_square and is_board_flipped:
+    if current_hovered_square and display.is_help_option_enabled("flip_board"):
         current_hovered_square = (7 - current_hovered_square[0], 7 - current_hovered_square[1])
 
     # Check if current hover is over a legal move square
@@ -288,11 +274,6 @@ while is_running:
         last_hover_was_legal = current_hover_is_legal
         needs_redraw = True
 
-    # Also check button hover (still need this for flip button)
-    current_button_hover = flip_button_rect.collidepoint(current_mouse_pos)
-    if current_button_hover != last_button_hover:
-        last_button_hover = current_button_hover
-        needs_redraw = True
 
     # Force redraws during animations (temporarily return to continuous rendering)
     if display.is_animation_active():
@@ -302,22 +283,12 @@ while is_running:
     if needs_redraw:
         # Draw the chess board (with flip consideration)
         current_mouse_pos = pygame.mouse.get_pos()
-        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, is_board_flipped, preview_board_state, dragging_piece, drag_origin, current_mouse_pos)
+        display.update_display(screen, board_state, selected_square_coords, highlighted_moves, display.is_help_option_enabled("flip_board"), preview_board_state, dragging_piece, drag_origin, current_mouse_pos)
 
         # Draw dragged piece snapped to square center
         if dragging_piece:
-            display.draw_dragged_piece(screen, dragging_piece, current_mouse_pos, is_board_flipped)
+            display.draw_dragged_piece(screen, dragging_piece, current_mouse_pos, display.is_help_option_enabled("flip_board"))
 
-        # Draw flip button
-        button_color = Colors.BUTTON_HOVER_COLOR if flip_button_rect.collidepoint(current_mouse_pos) else Colors.BUTTON_BACKGROUND_COLOR
-        pygame.draw.rect(screen, button_color, flip_button_rect)
-        pygame.draw.rect(screen, Colors.RGB_BLACK, flip_button_rect, 2)  # Border
-
-        # Draw button text
-        button_text = "Flip"
-        text_surface = font.render(button_text, True, Colors.BUTTON_TEXT_COLOR)
-        text_rect = text_surface.get_rect(center=flip_button_rect.center)
-        screen.blit(text_surface, text_rect)
 
         # Draw help panel if requested
         if show_help_panel:

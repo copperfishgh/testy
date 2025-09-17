@@ -75,13 +75,12 @@ python main.py
 - **Performance Optimized** - Annotations only compute when entering different legal squares
 - **Persistent Settings** - Helper preferences saved between sessions
 
-## Technical Details
+## Technical Requirements
 
 - **Python 3.x** with Pygame for graphics
-- **Modular architecture** - separate chess logic, display, and configuration
-- **Responsive design** - scales to different screen sizes
-- **FEN notation support** - standard position representation
-- **Complete move validation** - ensures only legal moves are allowed
+- **Optional**: NumPy for enhanced sound generation
+
+For technical architecture and development details, see [CLAUDE.md](CLAUDE.md).
 
 ## Analysis System Design
 
